@@ -121,45 +121,99 @@ public class UserEntityController {
 @PostMapping("/adminlogin")
 @Operation(summary = "authenticates admin users ")
 public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationRequest) throws Exception {
+    System.out.println("Admin login attempt for username: " + authenticationRequest.getUsername());
+    authenticationResponse = new JwtResponse();
+    
     UserEntity ue = userEntityRepository.findById(authenticationRequest.getUsername()).orElse(null);
     if (ue != null) {
         ue.setLogAs("admin");
         userEntityRepository.save(ue);
     }
-    if (userEntityService.getUser(authenticationRequest.getUsername()).getUserRole().contains("ADMIN")) {
+    
+    UserEntity userEntity = userEntityService.getUser(authenticationRequest.getUsername());
+    if (userEntity != null && userEntity.getUserRole() != null && userEntity.getUserRole().contains("ADMIN")) {
         try {
             // Change from GET to POST
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             HttpEntity<JwtRequest> requestEntity = new HttpEntity<>(authenticationRequest, headers);
 
+            System.out.println("Attempting Active Directory authentication for admin: " + authenticationRequest.getUsername());
             Boolean activeDirectory = restTemplate.postForObject(
                     BASE_URL,
                     requestEntity,
                     Boolean.class
             );
 
-            authenticationResponse = new JwtResponse();
             if (Boolean.TRUE.equals(activeDirectory)) {
+                System.out.println("Active Directory auth successful for admin, generating token");
                 UserDetails userDetails = myCustomUserDetailsService.loadUserByUsername(authenticationRequest.getUsername());
                 authenticationResponse.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
             } else {
+                System.out.println("Active Directory auth failed for admin");
                 authenticationResponse.setJwtToken(null);
             }
         } catch (BadCredentialsException e) {
+            System.out.println("BadCredentialsException for admin: " + e.getMessage());
             throw new Exception("Invalid Credentials", e);
+        } catch (Exception e) {
+            System.out.println("Exception during admin auth: " + e.getMessage());
+            authenticationResponse.setJwtToken(null);
         }
+    } else {
+        System.out.println("User not found or does not have ADMIN role");
+        authenticationResponse.setJwtToken(null);
     }
     return ResponseEntity.ok(authenticationResponse);
 }
 
-    @PostMapping("/login")
-    @Operation(summary = "authenticates user and log in ")
-    public ResponseEntity<?> login(@RequestBody JwtRequest authenticationRequest) throws Exception {
+    @PostMapping("/temp-login")
+    @Operation(summary = "temporary login - generates token for any user in database without authentication")
+    public ResponseEntity<?> tempLogin(@RequestBody JwtRequest authenticationRequest) throws Exception {
+        System.out.println("Temporary login attempt for username: " + authenticationRequest.getUsername());
         UserEntity ue = userEntityService.getUser(authenticationRequest.getUsername());
 
         if (ue != null) {
-            ue.setLogAs("user");
+            // Check if user has ADMIN role and set accordingly
+            if (ue.getUserRole() != null && ue.getUserRole().contains("ADMIN")) {
+                System.out.println("User is ADMIN, setting logAs to admin");
+                ue.setLogAs("admin");
+            } else {
+                System.out.println("User is regular user, setting logAs to user");
+                ue.setLogAs("user");
+            }
+            userEntityRepository.save(ue);
+
+            authenticationResponse = new JwtResponse();
+            System.out.println("Generating temporary token for: " + authenticationRequest.getUsername());
+            userDetails = myCustomUserDetailsService.loadUserByUsername(authenticationRequest.getUsername());
+            authenticationResponse.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
+            System.out.println("Temporary token generated successfully");
+        } else {
+            System.out.println("User not found in database: " + authenticationRequest.getUsername());
+            authenticationResponse = new JwtResponse();
+            authenticationResponse.setJwtToken(null);
+        }
+        System.out.println("Returning temp jwtToken: " + (authenticationResponse != null ? authenticationResponse.getJwtToken() : "null"));
+        return ResponseEntity.ok(authenticationResponse);
+    }
+
+    @PostMapping("/login")
+    @Operation(summary = "authenticates user and log in ")
+    public ResponseEntity<?> login(@RequestBody JwtRequest authenticationRequest) throws Exception {
+        System.out.println("Login attempt for username: " + authenticationRequest.getUsername());
+        UserEntity ue = userEntityService.getUser(authenticationRequest.getUsername());
+        System.out.println("UserEntity found: " + (ue != null ? ue.getUsername() : "null"));
+
+        if (ue != null) {
+            // Check if user has ADMIN role and set accordingly
+            if (ue.getUserRole() != null && ue.getUserRole().contains("ADMIN")) {
+                System.out.println("User is ADMIN, setting logAs to admin");
+                ue.setLogAs("admin");
+            } else {
+                System.out.println("User is regular user, setting logAs to user");
+                ue.setLogAs("user");
+            }
             userEntityRepository.save(ue);
 
             authenticationResponse = new JwtResponse();
@@ -169,27 +223,47 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 HttpEntity<JwtRequest> requestEntity = new HttpEntity<>(authenticationRequest, headers);
 
+                System.out.println("Attempting Active Directory authentication for: " + authenticationRequest.getUsername());
+                System.out.println("Request body being sent to AD: " + authenticationRequest.toString());
+                System.out.println("Full request entity: " + requestEntity.toString());
                 Boolean activeDirectory = restTemplate.postForObject(
                         BASE_URL,
                         requestEntity,
                         Boolean.class
                 );
+                System.out.println("Active Directory result: " + activeDirectory);
 
                 if (Boolean.TRUE.equals(activeDirectory)) {
+                    System.out.println("Active Directory auth successful, generating token");
                     userDetails = myCustomUserDetailsService.loadUserByUsername(authenticationRequest.getUsername());
                     authenticationResponse.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
                 } else if (Integer.parseInt(ue.getGrade()) == 0 && authenticationRequest.getUsername().equals(ue.getUsername())) {
+                    System.out.println("Checking grade 0 user password");
                     if (ue.getPassword().equals(authenticationRequest.getPassword())) {
+                        System.out.println("Grade 0 password match, generating token");
                         userDetails = myCustomUserDetailsService.loadUserByUsername(authenticationRequest.getUsername());
                         authenticationResponse.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
+                    } else {
+                        System.out.println("Grade 0 password mismatch");
+                        authenticationResponse.setJwtToken(null);
                     }
                 } else {
+                    System.out.println("Active Directory failed and not grade 0 user");
                     authenticationResponse.setJwtToken(null);
                 }
             } catch (BadCredentialsException e) {
+                System.out.println("BadCredentialsException: " + e.getMessage());
                 throw new Exception("Invalid Credentials", e);
+            } catch (Exception e) {
+                System.out.println("Exception during auth: " + e.getMessage());
+                authenticationResponse.setJwtToken(null);
             }
+        } else {
+            System.out.println("UserEntity is null, setting response to null");
+            authenticationResponse = new JwtResponse();
+            authenticationResponse.setJwtToken(null);
         }
+        System.out.println("Returning jwtToken: " + (authenticationResponse != null ? authenticationResponse.getJwtToken() : "null"));
         return ResponseEntity.ok(authenticationResponse);
     }
 

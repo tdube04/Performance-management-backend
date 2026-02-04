@@ -69,12 +69,14 @@ public class JWTUtility {
             List<String> roles=groupRepository.findById(key).orElse(null).getPermissions();
 
             claims.put(key, roles);
+            claims.put("logAs", "user");
             return createToken(claims, userDetails.getUsername());}
             else if (userEntity.getLogAs().equalsIgnoreCase("admin")&& userEntity.getUserRole().contains("ADMIN")) {
                 String key="ADMIN";
                 List<String> roles=groupRepository.findById(key).orElse(null).getPermissions();
 
                 claims.put(key, roles);
+                claims.put("logAs", "admin");
                 return createToken(claims, userDetails.getUsername());
             }
         }
@@ -83,6 +85,7 @@ public class JWTUtility {
             List<String> roles1 = groupRepository.findById(key1).orElse(null).getPermissions();
 
             claims1.put(key1, roles1);
+            claims1.put("logAs", "user");
 
 
 

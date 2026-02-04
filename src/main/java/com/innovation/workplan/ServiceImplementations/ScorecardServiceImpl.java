@@ -54,6 +54,10 @@ public class ScorecardServiceImpl implements ScorecardService {
     public Page<Scorecard> searchScorecard(Long id, String username, String period, Pageable pageable) {
         Query query=new Query().with(pageable);
         List<Criteria> criteria= new ArrayList<>();
+        
+        System.out.println("=== SCORECARD SEARCH DEBUG ===");
+        System.out.println("Searching for - ID: " + id + ", Username: " + username + ", Period: " + period);
+        
         if(id!=null ){
             criteria.add(Criteria.where("_id").is(id));
         }
@@ -66,13 +70,22 @@ public class ScorecardServiceImpl implements ScorecardService {
             criteria.add(Criteria.where("evaluationPeriod").is(period));
         }
 
+        // Removed status filter to allow viewing scorecards at any stage (WorkingScorecard or ResultsScorecard)
+
         if(!criteria.isEmpty()) {
             query.addCriteria(new Criteria().andOperator(criteria.toArray(new Criteria[0])));
         }
+        
+        System.out.println("Query: " + query.toString());
+        
         Page<Scorecard> plans= PageableExecutionUtils.getPage(mongoTemplate.find(query,Scorecard.class),
                 pageable,()->mongoTemplate
                         .count(query.skip(0).limit(0),Scorecard
                                 .class));
+        
+        System.out.println("Total Elements Found: " + plans.getTotalElements());
+        System.out.println("=== END DEBUG ===");
+        
         return plans;
     }
 
@@ -129,9 +142,15 @@ public class ScorecardServiceImpl implements ScorecardService {
 
     @Override
     public String update(Scorecard scorecard) {
-        if (scorecard.getScorecardStatus().toString().equalsIgnoreCase("WorkingScorecard")|scorecard
+        System.out.println("=== SCORECARD UPDATE DEBUG ===");
+        System.out.println("Scorecard ID: " + scorecard.getId());
+        System.out.println("Scorecard Status: " + scorecard.getScorecardStatus());
+        System.out.println("User Email: " + scorecard.getUser_email());
+        
+        if (scorecard.getScorecardStatus().toString().equalsIgnoreCase("WorkingScorecard") || scorecard
                 .getScorecardStatus().toString().equalsIgnoreCase("ResultsScorecard")) {
 
+            System.out.println("Status matches WorkingScorecard or ResultsScorecard");
             Query query = new Query();
             query.addCriteria(Criteria.where("_id").is(scorecard.getId()));
             Update updatescorecard = new Update();
@@ -145,11 +164,15 @@ public class ScorecardServiceImpl implements ScorecardService {
             updatescorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
             updatescorecard.set("summaryList", scorecard.getSummaryList());
             updatescorecard.set("scorecardStatusComment", scorecard.getScorecardStatusComment());
-            mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+            
+            Scorecard updatedScorecard = mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+            System.out.println("Updated Scorecard Status in DB: " + (updatedScorecard != null ? updatedScorecard.getScorecardStatus() : "NULL"));
+            System.out.println("=== END UPDATE DEBUG ===");
             return "successfully updated";
         }
         if (scorecard.getScorecardStatus().toString().equalsIgnoreCase("Approved")) {
 
+            System.out.println("Status matches Approved");
             Query query = new Query();
             query.addCriteria(Criteria.where("_id").is(scorecard.getId()));
             Update updatescorecard = new Update();
@@ -163,11 +186,14 @@ public class ScorecardServiceImpl implements ScorecardService {
             updatescorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
             updatescorecard.set("summaryList", scorecard.getSummaryList());
             updatescorecard.set("scorecardStatusComment", scorecard.getScorecardStatusComment());
-            mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+            
+            Scorecard updatedScorecard = mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+            System.out.println("Updated Scorecard Status to Approved in DB: " + (updatedScorecard != null ? updatedScorecard.getScorecardStatus() : "NULL"));
             return "successfully updated";
         }
         if (scorecard.getScorecardStatus().toString().equalsIgnoreCase("Rejected")) {
 
+            System.out.println("Status matches Rejected");
             Query query = new Query();
             query.addCriteria(Criteria.where("_id").is(scorecard.getId()));
             Update updatescorecard = new Update();
@@ -181,9 +207,13 @@ public class ScorecardServiceImpl implements ScorecardService {
             updatescorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
             updatescorecard.set("summaryList", scorecard.getSummaryList());
             updatescorecard.set("scorecardStatusComment", scorecard.getScorecardStatusComment());
-            mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+            
+            Scorecard updatedScorecard = mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+            System.out.println("Updated Scorecard Status to Rejected in DB: " + (updatedScorecard != null ? updatedScorecard.getScorecardStatus() : "NULL"));
             return "successfully updated";
         }
+        System.out.println("Status does not match any condition - returning failed to update");
+        System.out.println("=== END UPDATE DEBUG ===");
         return "failed to update";
 
 

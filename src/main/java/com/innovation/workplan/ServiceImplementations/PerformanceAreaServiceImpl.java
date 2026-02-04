@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -262,7 +263,7 @@ public class PerformanceAreaServiceImpl implements PerformanceAreaService {
                         }
                         else {
                             Update updateDef = new Update();
-                            updateDef.addToSet("programs", program);
+                            updateDef.set("programs", Arrays.asList(program));
                             mongoTemplate.findAndModify(query, updateDef, new FindAndModifyOptions().returnNew(true), PerformanceArea.class);
                             return ResponseEntity.status(200).body("Program Added Successfully");
                         }
@@ -274,7 +275,7 @@ public class PerformanceAreaServiceImpl implements PerformanceAreaService {
                 else {
                     System.out.println("hie");
                     Update updateDef = new Update();
-                    updateDef.addToSet("programs", program);
+                    updateDef.set("programs", Arrays.asList(program));
                     mongoTemplate.findAndModify(query, updateDef, new FindAndModifyOptions().returnNew(true), PerformanceArea.class);
                 }
                 return ResponseEntity.status(200).body("Program Added Successfully");

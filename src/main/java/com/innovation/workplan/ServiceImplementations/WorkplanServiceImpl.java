@@ -362,8 +362,15 @@ public class WorkplanServiceImpl implements WorkPlanService {
                     updateworkplan.set("statusComments", plan.getStatusComments());
                     mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
 
-                    emailService.sendSimpleMessage(plan.getUser_email()+domain, "Workplan Approved ", "Good day your workplan has been approved :"+ "\t" +
-                            " by"+"\n"+ SecurityUtils.getCurrentUserLogin().toString()+"\n"+"at:"+ LocalDateTime.now());
+                    // Send email but don't block scorecard creation if email fails
+                    try {
+                        emailService.sendSimpleMessage(plan.getUser_email()+domain, "Workplan Approved ", "Good day your workplan has been approved :"+ "\t" +
+                                " by"+"\n"+ SecurityUtils.getCurrentUserLogin().toString()+"\n"+"at:"+ LocalDateTime.now());
+                    } catch (Exception e) {
+                        System.out.println("WARNING: Failed to send email notification: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                    
                     createScorecard(plan);
                     Workplan wp1 = workPlanRepository.findById(plan.getId()).orElse(null);
                     if (wp1 != null) {
@@ -478,9 +485,21 @@ public class WorkplanServiceImpl implements WorkPlanService {
                 updateworkplan.set("statusComments", plan.getStatusComments());
                 mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
 
-                emailService.sendSimpleMessage(plan.getUser_email()+domain, "Workplan Approved ", "Good day your workplan has been approved :"+ "\t" +
-                        " by"+"\n"+ SecurityUtils.getCurrentUserLogin().toString()+"\n"+"at:"+ LocalDateTime.now());
+                // Send email but don't block scorecard creation if email fails
+                try {
+                    emailService.sendSimpleMessage(plan.getUser_email()+domain, "Workplan Approved ", "Good day your workplan has been approved :"+ "\t" +
+                            " by"+"\n"+ SecurityUtils.getCurrentUserLogin().toString()+"\n"+"at:"+ LocalDateTime.now());
+                } catch (Exception e) {
+                    System.out.println("WARNING: Failed to send email notification at line 488: " + e.getMessage());
+                    e.printStackTrace();
+                }
+
+                System.out.println("=== APPROVE WORKPLAN (NON-GRADE) DEBUG ===");
+                System.out.println("About to call createScorecard for workplan ID: " + plan.getId());
+                System.out.println("Workplan user_email: " + plan.getUser_email());
                 createScorecard(plan);
+                System.out.println("createScorecard completed");
+                System.out.println("=== END APPROVE WORKPLAN (NON-GRADE) DEBUG ===");
                 Workplan wp1 = workPlanRepository.findById(plan.getId()).orElse(null);
                 if (wp1 != null) {
                     UserEntity appraiser = userEntityRepository.findById(plan.getUser_email()).orElse(null);
@@ -565,8 +584,12 @@ public class WorkplanServiceImpl implements WorkPlanService {
                                 }
                                 if (wp.getAreasOfPerformance().size() > 0) {
                                     save(wp);
-                                    emailService.sendSimpleMessage(wp.getUser_email()+domain, "New Workplan ", "Good day you have been assigned  new workplan :"+ "\t" +
-                   " by"+"\n"+ wp.getAppraiser_email()+"\n"+"at:"+ LocalDateTime.now());
+                                    try {
+                                        emailService.sendSimpleMessage(wp.getUser_email()+domain, "New Workplan ", "Good day you have been assigned  new workplan :"+ "\t" +
+                           " by"+"\n"+ wp.getAppraiser_email()+"\n"+"at:"+ LocalDateTime.now());
+                                    } catch (Exception e) {
+                                        System.out.println("WARNING: Failed to send new workplan email: " + e.getMessage());
+                                    }
                                 }
                             }
                         }}
@@ -737,6 +760,12 @@ public class WorkplanServiceImpl implements WorkPlanService {
 //    }
 
     public Long createScorecard(Workplan workplan){
+        System.out.println("=== CREATE SCORECARD DEBUG ===");
+        System.out.println("Creating scorecard for workplan ID: " + workplan.getId());
+        System.out.println("User Email: " + workplan.getUser_email());
+        System.out.println("Evaluation Period: " + workplan.getEvaluationPeriod());
+        System.out.println("Areas of Performance count: " + (workplan.getAreasOfPerformance() != null ? workplan.getAreasOfPerformance().size() : 0));
+        
         Scorecard scorecard=new Scorecard();
         scorecard.setAppraiser(workplan.getAppraiser_email());
         scorecard.setEvaluator(workplan.getEvaluator_email());
@@ -801,7 +830,11 @@ public class WorkplanServiceImpl implements WorkPlanService {
 
         }
         scorecard.setAreasOfPerformance(areas);
-        return scorecardService.saveScorecard(scorecard);
+        System.out.println("Scorecard being saved with " + areas.size() + " performance areas");
+        Long scorecardId = scorecardService.saveScorecard(scorecard);
+        System.out.println("Scorecard saved with ID: " + scorecardId);
+        System.out.println("=== END CREATE SCORECARD DEBUG ===");
+        return scorecardId;
     }
 
 

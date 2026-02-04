@@ -48,6 +48,7 @@ public class MySecurityConfiguration extends WebSecurityConfigurerAdapter {
                         "/file/**",
                                 "/login",
                              "/adminlogin",
+                             "/temp-login",
 //                        "/workplan/updateWorkplan/{id}",
                      //     "/scorecard/searchScorecardByEvaluator",
                                 "/logout",
@@ -64,7 +65,9 @@ public class MySecurityConfiguration extends WebSecurityConfigurerAdapter {
                         "http://localhost:5173/",
                         "http://10.45.0.122:5173/",
                         "http://10.45.0.214:5173/",
-                        "http://10.45.0.229:5173"
+                        "http://localhost:3001/",
+                        "http://10.45.0.229:5173",
+                        "http://10.18.7.37:8080/temp-login"
 
 
                         )

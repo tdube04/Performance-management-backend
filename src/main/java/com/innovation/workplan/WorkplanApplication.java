@@ -122,13 +122,15 @@ public class WorkplanApplication {
 		user.setPassword("1234");
 		user.setEmail("tdube1@zimra.co.zw");
 		user.setEc_number("5140");
-		user.setGrade("14");
+		user.setGrade("1");
 		user.setName("Tafadzwa");
 		user.setSurname("Dube");
 		user.setDivisionName("It");
 		user.setPositionName("Gt");
 		user.setSectionName("Projects");
-		user.setUserRole(new ArrayList<>(List.of("ADMIN","USER")));
+		user.setUserRole(new ArrayList<>(List.of("USER")));
+		user.setAppraisees(new ArrayList<>(){{add("amuchoko");
+			add("mbanda");}});
 		userEntityService.save(user);
 
 		UserEntity user2 =new UserEntity();
@@ -157,11 +159,8 @@ public class WorkplanApplication {
 		user3.setDivisionName("It");
 		user3.setPositionName("Systems Developer");
 		user3.setSectionName("Projects");
-		user3.setLogAs("admin");
-		user3.setUserRole(new ArrayList<>(List.of("USER","ADMIN")));
-
-		user3.setAppraisees(new ArrayList<>(){{add("amuchoko");
-			add("tdube1");}});
+		user3.setLogAs("user");
+		user3.setUserRole(new ArrayList<>(List.of("USER")));
 		userEntityService.save(user3);
 	}
 
