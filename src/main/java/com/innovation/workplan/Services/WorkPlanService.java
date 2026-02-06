@@ -41,4 +41,11 @@ public interface WorkPlanService {
     Workplan update(Workplan workplan);
 
     Workplan exportWorkplanPDF(Principal principal);
+
+    // Board-specific methods for grade 0 users to manage grade 1 workplans
+    List<Workplan> searchWorkplanForBoard(String period, String planStatus);
+
+    String approveBoardWorkplan(Long id, String boardMemberEmail);
+
+    String rejectBoardWorkplan(Long id, String boardMemberEmail, String rejectionReason);
 }

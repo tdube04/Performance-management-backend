@@ -82,4 +82,33 @@ public class ScorecardController {
         return (this.scorecardService.searchScorecardByStatus(scorecardStatus));
     }
 
+    // Board-specific endpoints for grade 0 users to manage grade 1 scorecards
+    @GetMapping("/searchScorecardForBoard")
+    @PreAuthorize("hasAnyAuthority('SEARCH_SCORECARD', 'APPROVE_SCORECARD')")
+    @Operation(summary = "Search scorecards from grade 1 users for Board approval")
+    public List<Scorecard> searchScorecardForBoard(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String scorecardStatus) {
+        return this.scorecardService.searchScorecardForBoard(period, scorecardStatus);
+    }
+
+    @GetMapping("/approveBoardScorecard/{id}")
+    @PreAuthorize("hasAnyAuthority('UPDATE_SCORECARD')")
+    @Operation(summary = "Approve a scorecard at Board level")
+    public String approveBoardScorecard(
+            @PathVariable Long id,
+            @RequestParam(required = true) String boardMemberEmail) {
+        return this.scorecardService.approveBoardScorecard(id, boardMemberEmail);
+    }
+
+    @GetMapping("/rejectBoardScorecard/{id}")
+    @PreAuthorize("hasAnyAuthority('UPDATE_SCORECARD')")
+    @Operation(summary = "Reject a scorecard at Board level with comments")
+    public String rejectBoardScorecard(
+            @PathVariable Long id,
+            @RequestParam(required = true) String boardMemberEmail,
+            @RequestParam(required = true) String rejectionReason) {
+        return this.scorecardService.rejectBoardScorecard(id, boardMemberEmail, rejectionReason);
+    }
+
 }

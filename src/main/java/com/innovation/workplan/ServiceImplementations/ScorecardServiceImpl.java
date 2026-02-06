@@ -240,4 +240,156 @@ public class ScorecardServiceImpl implements ScorecardService {
         Scorecard scorecard = mongoTemplate.findOne(query, Scorecard.class);
         return scorecard;
     }
+
+    @Autowired
+    private com.innovation.workplan.Repositories.UserEntityRepository userEntityRepository;
+
+    private final String domain = "@zimra.co.zw";
+
+    // Board-specific methods for grade 0 users to manage grade 1 scorecards
+    @Override
+    public List<Scorecard> searchScorecardForBoard(String period, String scorecardStatus) {
+        Query query = new Query();
+        List<Criteria> criteria = new ArrayList<>();
+        
+        // Filter by evaluation period if provided
+        if (period != null && !period.isEmpty()) {
+            criteria.add(Criteria.where("evaluationPeriod").is(period));
+        }
+        
+        // Filter by scorecard status if provided
+        if (scorecardStatus != null && !scorecardStatus.isEmpty() && !"ALL".equalsIgnoreCase(scorecardStatus)) {
+             criteria.add(Criteria.where("scorecardStatus").is(scorecardStatus));
+        } else if (scorecardStatus == null || scorecardStatus.isEmpty()) {
+             // Default to pending if nothing specified
+             criteria.add(Criteria.where("scorecardStatus").is("ResultsScorecard"));
+        }
+
+        if (!criteria.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(criteria.toArray(new Criteria[0])));
+        }
+        
+        // Get all scorecards matching the criteria
+        List<Scorecard> allScorecards = mongoTemplate.find(query, Scorecard.class);
+        
+        // Filter to only include scorecards from grade 1 users
+        List<Scorecard> grade1Scorecards = new ArrayList<>();
+        for (Scorecard scorecard : allScorecards) {
+            UserEntity user = userEntityRepository.findById(scorecard.getUser_email()).orElse(null);
+            if (user != null && "1".equals(user.getGrade())) {
+                grade1Scorecards.add(scorecard);
+            }
+        }
+        
+        return grade1Scorecards;
+    }
+
+    @Override
+    public String approveBoardScorecard(Long id, String boardMemberEmail) {
+        Scorecard scorecard = scorecardRepository.findById(id).orElse(null);
+        
+        if (scorecard == null) {
+            return "Scorecard not found";
+        }
+        
+        // Verify the user is grade 1
+        UserEntity user = userEntityRepository.findById(scorecard.getUser_email()).orElse(null);
+        if (user == null || !"1".equals(user.getGrade())) {
+            return "This scorecard is not from a grade 1 user";
+        }
+        
+        // Verify the board member is grade 0
+        UserEntity boardMember = userEntityRepository.findById(boardMemberEmail).orElse(null);
+        if (boardMember == null) {
+            return "Board member not found with ID: '" + boardMemberEmail + "'";
+        }
+        if (!"0".equals(boardMember.getGrade())) {
+            return "User '" + boardMemberEmail + "' is not a Board member. Grade is: '" + boardMember.getGrade() + "'";
+        }
+        
+        // Update scorecard status to Approved
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(scorecard.getId()));
+        Update updateScorecard = new Update();
+        updateScorecard.set("user_email", scorecard.getUser_email());
+        updateScorecard.set("evaluator", scorecard.getEvaluator());
+        updateScorecard.set("appraiser", scorecard.getAppraiser());
+        updateScorecard.set("evaluationPeriod", scorecard.getEvaluationPeriod());
+        updateScorecard.set("AreasOfPerformance", scorecard.getAreasOfPerformance());
+        updateScorecard.set("scorecardStatus", "Approved");
+        updateScorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
+        updateScorecard.set("summaryList", scorecard.getSummaryList());
+        updateScorecard.set("scorecardStatusComment", "Approved by Board: " + boardMemberEmail);
+        
+        mongoTemplate.findAndModify(query, updateScorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+        
+        // Send email notification
+        /*try {
+            emailService.sendSimpleMessage(
+                scorecard.getUser_email() + domain,
+                "Scorecard Approved by Board",
+                "Good day, your scorecard has been approved by the Board.\n" +
+                "Approved by: " + boardMemberEmail + "\n" +
+                "Date: " + LocalDateTime.now()
+            );
+        } catch (Exception e) {
+            System.out.println("WARNING: Failed to send Board scorecard approval email: " + e.getMessage());
+        }*/
+        
+        return "Scorecard for " + scorecard.getUser_email() + " successfully approved by Board";
+    }
+
+    @Override
+    public String rejectBoardScorecard(Long id, String boardMemberEmail, String rejectionReason) {
+        Scorecard scorecard = scorecardRepository.findById(id).orElse(null);
+        
+        if (scorecard == null) {
+            return "Scorecard not found";
+        }
+        
+        // Verify the user is grade 1
+        UserEntity user = userEntityRepository.findById(scorecard.getUser_email()).orElse(null);
+        if (user == null || !"1".equals(user.getGrade())) {
+            return "This scorecard is not from a grade 1 user";
+        }
+        
+        // Verify the board member is grade 0
+        UserEntity boardMember = userEntityRepository.findById(boardMemberEmail).orElse(null);
+        if (boardMember == null || !"0".equals(boardMember.getGrade())) {
+            return "Only Board members (grade 0) can reject this scorecard";
+        }
+        
+        // Update scorecard status to Rejected
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(scorecard.getId()));
+        Update updateScorecard = new Update();
+        updateScorecard.set("user_email", scorecard.getUser_email());
+        updateScorecard.set("evaluator", scorecard.getEvaluator());
+        updateScorecard.set("appraiser", scorecard.getAppraiser());
+        updateScorecard.set("evaluationPeriod", scorecard.getEvaluationPeriod());
+        updateScorecard.set("AreasOfPerformance", scorecard.getAreasOfPerformance());
+        updateScorecard.set("scorecardStatus", "Rejected");
+        updateScorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
+        updateScorecard.set("summaryList", scorecard.getSummaryList());
+        updateScorecard.set("scorecardStatusComment", "Rejected by Board (" + boardMemberEmail + "): " + rejectionReason);
+        
+        mongoTemplate.findAndModify(query, updateScorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+        
+        // Send email notification
+        /*try {
+            emailService.sendSimpleMessage(
+                scorecard.getUser_email() + domain,
+                "Scorecard Rejected by Board",
+                "Your scorecard has been rejected by the Board.\n" +
+                "Rejected by: " + boardMemberEmail + "\n" +
+                "Reason: " + rejectionReason + "\n" +
+                "Date: " + LocalDateTime.now() + "\n\n" +
+                "Please review the comments and resubmit your scorecard."
+            );
+        } catch (Exception e) {
+            System.out.println("WARNING: Failed to send Board scorecard rejection email: " + e.getMessage());
+        }*/
+        
+        return "Scorecard for " + scorecard.getUser_email() + " rejected by Board";
+    }
 }

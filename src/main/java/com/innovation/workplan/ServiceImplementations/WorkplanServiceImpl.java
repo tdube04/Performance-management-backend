@@ -1183,4 +1183,143 @@ public class WorkplanServiceImpl implements WorkPlanService {
         }
         return true;
     }
+
+    // Board-specific methods for grade 0 users to manage grade 1 workplans
+    @Override
+    public List<Workplan> searchWorkplanForBoard(String period, String planStatus) {
+        Query query = new Query();
+        List<Criteria> criteria = new ArrayList<>();
+        
+        // Filter by evaluation period if provided
+        if (period != null && !period.isEmpty()) {
+            criteria.add(Criteria.where("evaluationPeriod").is(period));
+        }
+        
+        // Filter by workplan status if provided (default to "pendingApproval")
+        String status = (planStatus != null && !planStatus.isEmpty()) ? planStatus : "pendingApproval";
+        criteria.add(Criteria.where("workplanStatus").is(status));
+        
+        if (!criteria.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(criteria.toArray(new Criteria[0])));
+        }
+        
+        // Get all workplans matching the criteria
+        List<Workplan> allWorkplans = mongoTemplate.find(query, Workplan.class);
+        
+        // Filter to only include workplans from grade 1 users
+        List<Workplan> grade1Workplans = new ArrayList<>();
+        for (Workplan workplan : allWorkplans) {
+            UserEntity user = userEntityRepository.findById(workplan.getUser_email()).orElse(null);
+            if (user != null && "1".equals(user.getGrade())) {
+                grade1Workplans.add(workplan);
+            }
+        }
+        
+        return grade1Workplans;
+    }
+
+    @Override
+    public String approveBoardWorkplan(Long id, String boardMemberEmail) {
+        Workplan plan = workPlanRepository.findById(id).orElse(null);
+        
+        if (plan == null) {
+            return "Workplan not found";
+        }
+        
+        // Verify the user is grade 1
+        UserEntity user = userEntityRepository.findById(plan.getUser_email()).orElse(null);
+        if (user == null || !"1".equals(user.getGrade())) {
+            return "This workplan is not from a grade 1 user";
+        }
+        
+        // Verify the board member is grade 0
+        UserEntity boardMember = userEntityRepository.findById(boardMemberEmail).orElse(null);
+        if (boardMember == null || !"0".equals(boardMember.getGrade())) {
+            return "Only Board members (grade 0) can approve this workplan";
+        }
+        
+        // Update workplan status to Approved
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(plan.getId()));
+        Update updateworkplan = new Update();
+        updateworkplan.set("user_email", plan.getUser_email());
+        updateworkplan.set("evaluator_email", plan.getEvaluator_email());
+        updateworkplan.set("appraiser_email", plan.getAppraiser_email());
+        updateworkplan.set("evaluationPeriod", plan.getEvaluationPeriod());
+        updateworkplan.set("AreasOfPerformance", plan.getAreasOfPerformance());
+        updateworkplan.set("workplanStatus", "Approved");
+        updateworkplan.set("statusComments", "Approved by Board: " + boardMemberEmail);
+        
+        mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
+        
+        // Send email notification
+        try {
+            emailService.sendSimpleMessage(
+                plan.getUser_email() + domain,
+                "Workplan Approved by Board",
+                "Good day, your workplan has been approved by the Board.\n" +
+                "Approved by: " + boardMemberEmail + "\n" +
+                "Date: " + LocalDateTime.now()
+            );
+        } catch (Exception e) {
+            System.out.println("WARNING: Failed to send Board approval email: " + e.getMessage());
+        }
+        
+        // Create scorecard
+        createScorecard(plan);
+        
+        return "Workplan for " + plan.getUser_email() + " successfully approved by Board";
+    }
+
+    @Override
+    public String rejectBoardWorkplan(Long id, String boardMemberEmail, String rejectionReason) {
+        Workplan plan = workPlanRepository.findById(id).orElse(null);
+        
+        if (plan == null) {
+            return "Workplan not found";
+        }
+        
+        // Verify the user is grade 1
+        UserEntity user = userEntityRepository.findById(plan.getUser_email()).orElse(null);
+        if (user == null || !"1".equals(user.getGrade())) {
+            return "This workplan is not from a grade 1 user";
+        }
+        
+        // Verify the board member is grade 0
+        UserEntity boardMember = userEntityRepository.findById(boardMemberEmail).orElse(null);
+        if (boardMember == null || !"0".equals(boardMember.getGrade())) {
+            return "Only Board members (grade 0) can reject this workplan";
+        }
+        
+        // Update workplan status to Rejected
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(plan.getId()));
+        Update updateworkplan = new Update();
+        updateworkplan.set("user_email", plan.getUser_email());
+        updateworkplan.set("evaluator_email", plan.getEvaluator_email());
+        updateworkplan.set("appraiser_email", plan.getAppraiser_email());
+        updateworkplan.set("evaluationPeriod", plan.getEvaluationPeriod());
+        updateworkplan.set("AreasOfPerformance", plan.getAreasOfPerformance());
+        updateworkplan.set("workplanStatus", "Rejected");
+        updateworkplan.set("statusComments", "Rejected by Board (" + boardMemberEmail + "): " + rejectionReason);
+        
+        mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
+        
+        // Send email notification
+        try {
+            emailService.sendSimpleMessage(
+                plan.getUser_email() + domain,
+                "Workplan Rejected by Board",
+                "Your workplan has been rejected by the Board.\n" +
+                "Rejected by: " + boardMemberEmail + "\n" +
+                "Reason: " + rejectionReason + "\n" +
+                "Date: " + LocalDateTime.now() + "\n\n" +
+                "Please review the comments and resubmit your workplan."
+            );
+        } catch (Exception e) {
+            System.out.println("WARNING: Failed to send Board rejection email: " + e.getMessage());
+        }
+        
+        return "Workplan for " + plan.getUser_email() + " rejected by Board";
+    }
 }

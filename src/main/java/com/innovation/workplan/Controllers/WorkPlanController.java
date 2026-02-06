@@ -179,7 +179,37 @@ public class WorkPlanController {
 
    }
 
+   // Board-specific endpoints for grade 0 users to manage grade 1 workplans
+   @GetMapping("/searchWorkplanForBoard")
+   @PreAuthorize("hasAnyAuthority('SEARCH_WORKPLAN', 'APPROVE_WORKPLAN')")
+   @Operation(summary = "Search workplans from grade 1 users for Board approval")
+   public List<Workplan> searchWorkplanForBoard(
+           @RequestParam(required = false) String period,
+           @RequestParam(required = false) String planStatus) {
+      return this.workPlanService.searchWorkplanForBoard(period, planStatus);
+   }
+
+   @GetMapping("/approveBoardWorkplan/{id}")
+   @PreAuthorize("hasAnyAuthority('APPROVE_WORKPLAN')")
+   @Operation(summary = "Approve a workplan at Board level")
+   public String approveBoardWorkplan(
+           @PathVariable Long id,
+           @RequestParam(required = true) String boardMemberEmail) {
+      return this.workPlanService.approveBoardWorkplan(id, boardMemberEmail);
+   }
+
+   @GetMapping("/rejectBoardWorkplan/{id}")
+   @PreAuthorize("hasAnyAuthority('DISAPPROVE_WORKPLAN')")
+   @Operation(summary = "Reject a workplan at Board level with comments")
+   public String rejectBoardWorkplan(
+           @PathVariable Long id,
+           @RequestParam(required = true) String boardMemberEmail,
+           @RequestParam(required = true) String rejectionReason) {
+      return this.workPlanService.rejectBoardWorkplan(id, boardMemberEmail, rejectionReason);
+   }
+
 
 
 }
+
 

@@ -20,4 +20,11 @@ public interface ScorecardService {
     List<Scorecard> searchScorecardByEvaluator(String evaluator_email, String period, String planStatus);
 
     List<Scorecard> searchScorecardByStatus(String scorecardStatus);
+
+    // Board-specific methods for grade 0 users to manage grade 1 scorecards
+    List<Scorecard> searchScorecardForBoard(String period, String scorecardStatus);
+
+    String approveBoardScorecard(Long id, String boardMemberEmail);
+
+    String rejectBoardScorecard(Long id, String boardMemberEmail, String rejectionReason);
 }
