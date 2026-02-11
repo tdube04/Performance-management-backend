@@ -392,4 +392,119 @@ public class ScorecardServiceImpl implements ScorecardService {
         
         return "Scorecard for " + scorecard.getUser_email() + " rejected by Board";
     }
+
+    // Appraisee Confirmation Method
+    @Override
+    public String confirmScorecard(Long id, Scorecard scorecard) {
+        Scorecard existingScorecard = scorecardRepository.findById(id).orElse(null);
+        
+        if (existingScorecard == null) {
+            return "Scorecard not found";
+        }
+        
+        // Only allow confirmation if scorecard is Approved
+        if (!"Approved".equals(existingScorecard.getScorecardStatus())) {
+            return "Scorecard must be Approved before confirmation";
+        }
+        
+        // Update confirmation fields
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(id));
+        Update updateScorecard = new Update();
+        
+        updateScorecard.set("appraiseeConfirmed", scorecard.getAppraiseeConfirmed());
+        updateScorecard.set("appraiseeConfirmedAt", LocalDateTime.now());
+        updateScorecard.set("confirmationStatus", scorecard.getConfirmationStatus());
+        updateScorecard.set("appraiseeComments", scorecard.getAppraiseeComments());
+        updateScorecard.set("forwardedToHC", scorecard.getForwardedToHC());
+        updateScorecard.set("forwardedToHCAt", scorecard.getForwardedToHC() ? LocalDateTime.now() : null);
+        updateScorecard.set("hcStatus", "PENDING_HC");
+        
+        mongoTemplate.findAndModify(query, updateScorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+        
+        return "Scorecard confirmed successfully and forwarded to Human Capital";
+    }
+
+    // HC Dashboard Methods
+    @Override
+    public List<Scorecard> searchAllScorecards(String period, String scorecardStatus, String grade, String division, String section) {
+        Query query = new Query();
+        List<Criteria> criteria = new ArrayList<>();
+        
+        if (period != null && !period.isEmpty()) {
+            criteria.add(Criteria.where("evaluationPeriod").is(period));
+        }
+        
+        if (scorecardStatus != null && !scorecardStatus.isEmpty() && !"ALL".equalsIgnoreCase(scorecardStatus)) {
+            criteria.add(Criteria.where("scorecardStatus").is(scorecardStatus));
+        }
+        
+        if (!criteria.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(criteria.toArray(new Criteria[0])));
+        }
+        
+        List<Scorecard> allScorecards = mongoTemplate.find(query, Scorecard.class);
+        
+        // Filter by user properties if provided
+        List<Scorecard> filteredScorecards = new ArrayList<>();
+        for (Scorecard scorecard : allScorecards) {
+            UserEntity user = userEntityRepository.findById(scorecard.getUser_email()).orElse(null);
+            if (user != null) {
+                boolean matches = true;
+                
+                if (grade != null && !grade.isEmpty() && !grade.equals(user.getGrade())) {
+                    matches = false;
+                }
+                if (division != null && !division.isEmpty() && !division.equals(user.getDivisionName())) {
+                    matches = false;
+                }
+                if (section != null && !section.isEmpty() && !section.equals(user.getSectionName())) {
+                    matches = false;
+                }
+                
+                if (matches) {
+                    filteredScorecards.add(scorecard);
+                }
+            }
+        }
+        
+        return filteredScorecards;
+    }
+
+    @Override
+    public java.util.Map<String, Object> getHCSummary(String period) {
+        java.util.Map<String, Object> summary = new java.util.HashMap<>();
+        
+        Query query = new Query();
+        if (period != null && !period.isEmpty()) {
+            query.addCriteria(Criteria.where("evaluationPeriod").is(period));
+        }
+        
+        List<Scorecard> allScorecards = mongoTemplate.find(query, Scorecard.class);
+        
+        int totalUsers = 0;
+        int submitted = 0;
+        int pending = 0;
+        int postQuarterEnd = 0;
+        
+        for (Scorecard scorecard : allScorecards) {
+            if (scorecard.getForwardedToHC() != null && scorecard.getForwardedToHC()) {
+                submitted++;
+                if (scorecard.getSubmittedAfterQuarterEnd() != null && scorecard.getSubmittedAfterQuarterEnd()) {
+                    postQuarterEnd++;
+                }
+            } else {
+                pending++;
+            }
+        }
+        
+        totalUsers = allScorecards.size();
+        
+        summary.put("totalUsers", totalUsers);
+        summary.put("submitted", submitted);
+        summary.put("pending", pending);
+        summary.put("postQuarterEnd", postQuarterEnd);
+        
+        return summary;
+    }
 }

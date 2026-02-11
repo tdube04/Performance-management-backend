@@ -63,7 +63,15 @@ public class JWTUtility {
         String password=userDetails.getPassword();
         UserEntity userEntity=userEntityService.findByUsername(userDetails.getUsername());
         if(userEntity!=null){
-            if(userEntity.getLogAs().equalsIgnoreCase("user")&& userEntity.getUserRole().contains("USER")){
+            if(userEntity.getLogAs().equalsIgnoreCase("hc") && userEntity.getUserRole().contains("HC")){
+                String key="HC_USER";
+                List<String> roles=groupRepository.findById(key).orElse(null).getPermissions();
+
+                claims.put(key, roles);
+                claims.put("logAs", "hc");
+                return createToken(claims, userDetails.getUsername());
+            }
+            else if(userEntity.getLogAs().equalsIgnoreCase("user")&& userEntity.getUserRole().contains("USER")){
 
             String key="USER";
             List<String> roles=groupRepository.findById(key).orElse(null).getPermissions();

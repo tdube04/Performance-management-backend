@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/scorecard")
@@ -109,6 +110,37 @@ public class ScorecardController {
             @RequestParam(required = true) String boardMemberEmail,
             @RequestParam(required = true) String rejectionReason) {
         return this.scorecardService.rejectBoardScorecard(id, boardMemberEmail, rejectionReason);
+    }
+
+    // Appraisee Confirmation Endpoint
+    @PutMapping("/{id}/confirm")
+    @PreAuthorize("hasAnyAuthority('CONFIRM_SCORECARD')")
+    @Operation(summary = "Appraisee confirms acceptance of scorecard after appraiser approval")
+    public String confirmScorecard(
+            @PathVariable Long id,
+            @RequestBody Scorecard scorecard) {
+        return this.scorecardService.confirmScorecard(id, scorecard);
+    }
+
+    // HC Dashboard Endpoints
+    @GetMapping("/searchAllScorecards")
+    @PreAuthorize("hasAnyAuthority('HC_ACCESS', 'ADMIN')")
+    @Operation(summary = "Search all scorecards for HC dashboard")
+    public List<Scorecard> searchAllScorecards(
+            @RequestParam(required = false) String period,
+            @RequestParam(required = false) String scorecardStatus,
+            @RequestParam(required = false) String grade,
+            @RequestParam(required = false) String division,
+            @RequestParam(required = false) String section) {
+        return this.scorecardService.searchAllScorecards(period, scorecardStatus, grade, division, section);
+    }
+
+    @GetMapping("/hc/summary")
+    @PreAuthorize("hasAnyAuthority('HC_ACCESS', 'ADMIN')")
+    @Operation(summary = "Get HC dashboard summary statistics")
+    public Map<String, Object> getHCSummary(
+            @RequestParam(required = false) String period) {
+        return this.scorecardService.getHCSummary(period);
     }
 
 }

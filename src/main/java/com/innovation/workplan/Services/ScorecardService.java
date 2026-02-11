@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 public interface ScorecardService {
     Long saveScorecard(Scorecard scorecard);
@@ -27,4 +28,12 @@ public interface ScorecardService {
     String approveBoardScorecard(Long id, String boardMemberEmail);
 
     String rejectBoardScorecard(Long id, String boardMemberEmail, String rejectionReason);
+
+    // Appraisee Confirmation Methods
+    String confirmScorecard(Long id, Scorecard scorecard);
+
+    // HC Dashboard Methods
+    List<Scorecard> searchAllScorecards(String period, String scorecardStatus, String grade, String division, String section);
+
+    Map<String, Object> getHCSummary(String period);
 }

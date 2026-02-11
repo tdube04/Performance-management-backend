@@ -53,6 +53,10 @@ public class MyCustomUserDetailsService implements UserDetailsService {
                 return new User(userEntity.getUsername(),"",userGroupRepository.findById("ADMIN").orElse(null)
                         .getPermissions().
                         parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
+            if(userEntity.getUserRole().contains("HC")){
+                return new User(userEntity.getUsername(),"",userGroupRepository.findById("HC_USER").orElse(null)
+                        .getPermissions().
+                        parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
 
         }
 

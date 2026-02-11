@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -39,10 +40,26 @@ public class Scorecard extends IRBMBase {
     private float total_overal_weighted_score;
     private String scorecardStatus;
     private String scorecardStatusComment;
-    //working or results (when updating save a new record)
-    // approve on the employee can only be visible when the superior approves others save/submit are only visible
-
-
-
-
+    
+    // Appraisee Confirmation Fields
+    private Boolean appraiseeConfirmed;
+    private LocalDateTime appraiseeConfirmedAt;
+    private String confirmationStatus; // PENDING, CONFIRMED, REJECTED
+    private String appraiseeComments;
+    
+    // Forward to HC Fields
+    private Boolean forwardedToHC;
+    private LocalDateTime forwardedToHCAt;
+    
+    // Status for HC workflow
+    private String hcStatus; // PENDING_HC, UNDER_REVIEW_HC, COMPLETED
+    
+    // Quarter end tracking
+    private Boolean submittedAfterQuarterEnd;
+    private LocalDateTime quarterEndDate;
+    
+    // Timestamps
+    private LocalDateTime approvedByAppraiserAt;
+    private LocalDateTime approvedByEvaluatorAt;
+    private LocalDateTime approvedByBoardAt;
 }
