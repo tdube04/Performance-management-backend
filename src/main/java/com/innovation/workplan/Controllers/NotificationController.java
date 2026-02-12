@@ -29,6 +29,14 @@ public class NotificationController {
         return ResponseEntity.ok(notifications);
     }
     
+    // Get notifications visible to a specific user role
+    @GetMapping("/visible")
+    public ResponseEntity<List<Notification>> getVisibleNotifications(
+            @RequestParam(required = false, defaultValue = "user") String userRole) {
+        List<Notification> notifications = notificationService.getNotificationsVisibleTo(userRole);
+        return ResponseEntity.ok(notifications);
+    }
+    
     @GetMapping("/{id}")
     public ResponseEntity<Notification> getNotificationById(@PathVariable String id) {
         return notificationService.getNotificationById(id)
@@ -47,6 +55,32 @@ public class NotificationController {
             @PathVariable String id, 
             @RequestBody Notification notification) {
         Notification updated = notificationService.updateNotification(id, notification);
+        if (updated != null) {
+            return ResponseEntity.ok(updated);
+        }
+        return ResponseEntity.notFound().build();
+    }
+    
+    // Update only visibility settings
+    @PutMapping("/{id}/visibility")
+    public ResponseEntity<Notification> updateVisibility(
+            @PathVariable String id,
+            @RequestBody Map<String, Boolean> visibility) {
+        Boolean visibleToAll = visibility.get("visibleToAll");
+        Boolean visibleToAppraisees = visibility.get("visibleToAppraisees");
+        Boolean visibleToAppraisers = visibility.get("visibleToAppraisers");
+        Boolean visibleToHC = visibility.get("visibleToHC");
+        Boolean visibleToAdmin = visibility.get("visibleToAdmin");
+        
+        Notification updated = notificationService.updateVisibility(
+                id, 
+                visibleToAll != null ? visibleToAll : false,
+                visibleToAppraisees != null ? visibleToAppraisees : false,
+                visibleToAppraisers != null ? visibleToAppraisers : false,
+                visibleToHC != null ? visibleToHC : false,
+                visibleToAdmin != null ? visibleToAdmin : false
+        );
+        
         if (updated != null) {
             return ResponseEntity.ok(updated);
         }

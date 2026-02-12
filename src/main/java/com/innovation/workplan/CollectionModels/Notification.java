@@ -2,7 +2,9 @@ package com.innovation.workplan.CollectionModels;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Document(collection = "notifications")
@@ -17,6 +19,13 @@ public class Notification {
     private String targetAudience; // all, admin, hc, appraisees, appraisers
     private boolean isActive;
     
+    // Visibility controls - HC can toggle these
+    private boolean visibleToAll;
+    private boolean visibleToAppraisees;
+    private boolean visibleToAppraisers;
+    private boolean visibleToHC;
+    private boolean visibleToAdmin;
+    
     private String createdBy;
     private LocalDateTime createdAt;
     private String updatedBy;
@@ -25,12 +34,20 @@ public class Notification {
     private LocalDateTime deletedAt;
     private boolean isDeleted;
     
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate startDate;
+    
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate endDate;
     
     public Notification() {
         this.isActive = true;
         this.isDeleted = false;
+        this.visibleToAll = true;
+        this.visibleToAppraisees = true;
+        this.visibleToAppraisers = true;
+        this.visibleToHC = true;
+        this.visibleToAdmin = true;
     }
     
     // Getters and Setters
@@ -80,6 +97,46 @@ public class Notification {
     
     public void setActive(boolean active) {
         isActive = active;
+    }
+    
+    public boolean isVisibleToAll() {
+        return visibleToAll;
+    }
+    
+    public void setVisibleToAll(boolean visibleToAll) {
+        this.visibleToAll = visibleToAll;
+    }
+    
+    public boolean isVisibleToAppraisees() {
+        return visibleToAppraisees;
+    }
+    
+    public void setVisibleToAppraisees(boolean visibleToAppraisees) {
+        this.visibleToAppraisees = visibleToAppraisees;
+    }
+    
+    public boolean isVisibleToAppraisers() {
+        return visibleToAppraisers;
+    }
+    
+    public void setVisibleToAppraisers(boolean visibleToAppraisers) {
+        this.visibleToAppraisers = visibleToAppraisers;
+    }
+    
+    public boolean isVisibleToHC() {
+        return visibleToHC;
+    }
+    
+    public void setVisibleToHC(boolean visibleToHC) {
+        this.visibleToHC = visibleToHC;
+    }
+    
+    public boolean isVisibleToAdmin() {
+        return visibleToAdmin;
+    }
+    
+    public void setVisibleToAdmin(boolean visibleToAdmin) {
+        this.visibleToAdmin = visibleToAdmin;
     }
     
     public String getCreatedBy() {
@@ -138,19 +195,49 @@ public class Notification {
         isDeleted = deleted;
     }
     
-    public LocalDateTime getStartDate() {
+    public LocalDate getStartDate() {
         return startDate;
     }
     
-    public void setStartDate(LocalDateTime startDate) {
+    public void setStartDate(LocalDate startDate) {
         this.startDate = startDate;
     }
     
-    public LocalDateTime getEndDate() {
+    public LocalDate getEndDate() {
         return endDate;
     }
     
-    public void setEndDate(LocalDateTime endDate) {
+    public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
+    }
+    
+    // Helper method to check if notification is visible to a specific audience
+    public boolean isVisibleTo(String userRole) {
+        if (!isActive || isDeleted) {
+            return false;
+        }
+        
+        // Check date range
+        LocalDate now = LocalDate.now();
+        if (startDate != null && now.isBefore(startDate)) {
+            return false;
+        }
+        if (endDate != null && now.isAfter(endDate)) {
+            return false;
+        }
+        
+        // Check visibility based on user role
+        switch (userRole.toLowerCase()) {
+            case "hc":
+                return visibleToAll || visibleToHC;
+            case "admin":
+                return visibleToAll || visibleToAdmin;
+            case "appraisee":
+                return visibleToAll || visibleToAppraisees;
+            case "appraiser":
+                return visibleToAll || visibleToAppraisers;
+            default:
+                return visibleToAll;
+        }
     }
 }

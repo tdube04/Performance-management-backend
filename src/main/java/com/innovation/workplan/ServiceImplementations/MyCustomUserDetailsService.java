@@ -18,6 +18,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import javax.servlet.http.HttpServletRequest;
 import java.net.http.HttpRequest;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,9 +55,22 @@ public class MyCustomUserDetailsService implements UserDetailsService {
                         .getPermissions().
                         parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
             if(userEntity.getUserRole().contains("HC")){
-                return new User(userEntity.getUsername(),"",userGroupRepository.findById("HC_USER").orElse(null)
-                        .getPermissions().
-                        parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
+                // Get HC_USER group permissions and add HC_ACCESS authority
+                List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("HC_ACCESS"));
+                authorities.add(new SimpleGrantedAuthority("GET_ALL_USERS"));
+                authorities.add(new SimpleGrantedAuthority("GET_USER"));
+                authorities.add(new SimpleGrantedAuthority("SEARCH_USER"));
+                
+                // Get additional permissions from HC_USER group if it exists
+                UserGroup hcGroup = userGroupRepository.findById("HC_USER").orElse(null);
+                if (hcGroup != null && hcGroup.getPermissions() != null) {
+                    authorities.addAll(hcGroup.getPermissions().stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toList()));
+                }
+                
+                return new User(userEntity.getUsername(), "", authorities);}
 
         }
 

@@ -78,7 +78,7 @@ public class UserEntityController {
     @GetMapping("/User/{id}")
     @PreAuthorize("hasAnyAuthority('GET_USER')")
     @Operation(summary = "get a user from the database")
-    public UserEntity getUser(@RequestParam String id){
+    public UserEntity getUser(@PathVariable String id){
 
                 UserEntity u =userEntityService.getUser(id);
                 if(u!=null){
