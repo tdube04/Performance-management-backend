@@ -1195,9 +1195,13 @@ public class WorkplanServiceImpl implements WorkPlanService {
             criteria.add(Criteria.where("evaluationPeriod").is(period));
         }
         
-        // Filter by workplan status if provided (default to "pendingApproval")
-        String status = (planStatus != null && !planStatus.isEmpty()) ? planStatus : "pendingApproval";
-        criteria.add(Criteria.where("workplanStatus").is(status));
+        // Filter by workplan status if provided (skip for "ALL")
+        if (planStatus != null && !planStatus.isEmpty() && !"ALL".equalsIgnoreCase(planStatus)) {
+            criteria.add(Criteria.where("workplanStatus").is(planStatus));
+        } else if (planStatus == null || planStatus.isEmpty()) {
+            // Default to pending if nothing specified
+            criteria.add(Criteria.where("workplanStatus").is("pendingApproval"));
+        }
         
         if (!criteria.isEmpty()) {
             query.addCriteria(new Criteria().andOperator(criteria.toArray(new Criteria[0])));
