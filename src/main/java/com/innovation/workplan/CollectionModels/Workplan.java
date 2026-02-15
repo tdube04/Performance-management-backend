@@ -7,6 +7,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -45,12 +46,9 @@ public class Workplan extends IRBMBase{
     private String statusComments;
     private String EvaluatorStatusComments;
 
-    //ammended or initial (when updating save a new record)
-    // approve on the employee can only be visible when the superior approves others save/submit are only visible
-
-    //private String appraiserSignature;
-    //private String appraiseeSignature;
-    //private String EvaluatorSignature;
+    // Date tracking
+    private LocalDateTime dateSubmitted;
+    private LocalDateTime dateApproved;
 
 
 }

@@ -41,6 +41,10 @@ public class Scorecard extends IRBMBase {
     private String scorecardStatus;
     private String scorecardStatusComment;
     
+    // Date tracking for scorecard submission/approval
+    private LocalDateTime dateSubmitted;
+    private LocalDateTime dateApproved;
+    
     // Appraisee Confirmation Fields
     private Boolean appraiseeConfirmed;
     private LocalDateTime appraiseeConfirmedAt;

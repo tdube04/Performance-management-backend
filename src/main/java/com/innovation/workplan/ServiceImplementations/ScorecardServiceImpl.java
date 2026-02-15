@@ -164,6 +164,9 @@ public class ScorecardServiceImpl implements ScorecardService {
             updatescorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
             updatescorecard.set("summaryList", scorecard.getSummaryList());
             updatescorecard.set("scorecardStatusComment", scorecard.getScorecardStatusComment());
+            updatescorecard.set("dateSubmitted", LocalDateTime.now());
+            // Clear dateApproved when re-submitting after rejection
+            updatescorecard.set("dateApproved", null);
             
             Scorecard updatedScorecard = mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
             System.out.println("Updated Scorecard Status in DB: " + (updatedScorecard != null ? updatedScorecard.getScorecardStatus() : "NULL"));
@@ -186,6 +189,7 @@ public class ScorecardServiceImpl implements ScorecardService {
             updatescorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
             updatescorecard.set("summaryList", scorecard.getSummaryList());
             updatescorecard.set("scorecardStatusComment", scorecard.getScorecardStatusComment());
+            updatescorecard.set("dateApproved", LocalDateTime.now());
             
             Scorecard updatedScorecard = mongoTemplate.findAndModify(query, updatescorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
             System.out.println("Updated Scorecard Status to Approved in DB: " + (updatedScorecard != null ? updatedScorecard.getScorecardStatus() : "NULL"));
@@ -320,6 +324,7 @@ public class ScorecardServiceImpl implements ScorecardService {
         updateScorecard.set("total_overal_weighted_score", scorecard.getTotal_overal_weighted_score());
         updateScorecard.set("summaryList", scorecard.getSummaryList());
         updateScorecard.set("scorecardStatusComment", "Approved by Board: " + boardMemberEmail);
+        updateScorecard.set("dateApproved", LocalDateTime.now());
         
         mongoTemplate.findAndModify(query, updateScorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
         

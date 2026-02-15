@@ -58,7 +58,7 @@ public class WorkplanApplication {
  		user.setPassword("1234");
  		user.setEmail("tdube1@zimra.co.zw");
  		user.setEc_number("5140");
- 		user.setGrade("14");
+ 		user.setGrade("1");
  		user.setName("Tafadzwa");
  		user.setSurname("Dube");
  		user.setDivisionName("It");

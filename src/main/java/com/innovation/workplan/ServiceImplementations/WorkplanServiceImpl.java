@@ -223,6 +223,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
                 updateworkplan.set("AreasOfPerformance", plan.getAreasOfPerformance());
                 updateworkplan.set("workplanStatus", "Approved");
                 updateworkplan.set("statusComments", plan.getStatusComments());
+                updateworkplan.set("dateApproved", LocalDateTime.now());
                 mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
 
                 emailService.sendSimpleMessage(plan.getUser_email()+domain, "Workplan Approved ", "Good day your workplan has been approved :"+ "\t" +
@@ -360,6 +361,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
                     updateworkplan.set("AreasOfPerformance", plan.getAreasOfPerformance());
                     updateworkplan.set("workplanStatus", "Approved");
                     updateworkplan.set("statusComments", plan.getStatusComments());
+                    updateworkplan.set("dateApproved", LocalDateTime.now());
                     mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
 
                     // Send email but don't block scorecard creation if email fails
@@ -956,6 +958,9 @@ public class WorkplanServiceImpl implements WorkPlanService {
                 updateworkplan.set("AreasOfPerformance", workplan.getAreasOfPerformance());
                 updateworkplan.set("workplanStatus", workplan.getWorkplanStatus());
                 updateworkplan.set("statusComments", workplan.getStatusComments());
+                updateworkplan.set("dateSubmitted", LocalDateTime.now());
+                // Clear dateApproved when re-submitting after rejection
+                updateworkplan.set("dateApproved", null);
                 return mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
 
 //            }
@@ -1253,6 +1258,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
         updateworkplan.set("AreasOfPerformance", plan.getAreasOfPerformance());
         updateworkplan.set("workplanStatus", "Approved");
         updateworkplan.set("statusComments", "Approved by Board: " + boardMemberEmail);
+        updateworkplan.set("dateApproved", LocalDateTime.now());
         
         mongoTemplate.findAndModify(query, updateworkplan, new FindAndModifyOptions().returnNew(true), Workplan.class);
         
