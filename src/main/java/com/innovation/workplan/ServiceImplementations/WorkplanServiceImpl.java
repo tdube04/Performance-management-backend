@@ -619,18 +619,31 @@ public class WorkplanServiceImpl implements WorkPlanService {
                     ArrayList<MPI> newIndicators = new ArrayList<>();
                     List<MPI> indicators = prog.getIndicators();
                     for (int i = 0; i < indicators.size(); i++) {
-                        for (ResponsiblePerson person : indicators.get(i).getResponsibleResources()) {
-                            if (person.getUsername().equalsIgnoreCase(user)) {
-                                KPI kpi = new KPI();
+                        System.out.println("DEBUG sortWeights: Checking indicator: " + indicators.get(i).getDescription());
+                        System.out.println("DEBUG sortWeights: Indicator responsibleResources: " + indicators.get(i).getResponsibleResources());
+                        
+                        if (indicators.get(i).getResponsibleResources() != null) {
+                            for (ResponsiblePerson person : indicators.get(i).getResponsibleResources()) {
+                                String personUsername = person.getUsername();
+                                System.out.println("DEBUG sortWeights: Comparing user='" + user + "' with personUsername='" + personUsername + "'");
+                                System.out.println("DEBUG sortWeights: equalsIgnoreCase result: " + (personUsername != null && personUsername.equalsIgnoreCase(user)));
+                                
+                                if (personUsername != null && personUsername.equalsIgnoreCase(user)) {
+                                    System.out.println("DEBUG sortWeights: MATCH FOUND for user: " + user);
+                                    KPI kpi = new KPI();
 
-                                total_weight=total_weight+indicators.get(i).getWeight();
-                                if(kpi!=null){
-                                    newprogs.add(kpi);}
+                                    total_weight=total_weight+indicators.get(i).getWeight();
+                                    if(kpi!=null){
+                                        newprogs.add(kpi);}
+                                }
                             }
+                        } else {
+                            System.out.println("DEBUG sortWeights: responsibleResources is NULL for indicator");
                         }
                     }
                 }
                 dictionery.put(area_name,total_weight);
+                System.out.println("DEBUG sortWeights: Final total_weight for " + area_name + ": " + total_weight);
             }
         return dictionery;
     }
@@ -1275,8 +1288,148 @@ public class WorkplanServiceImpl implements WorkPlanService {
             System.out.println("WARNING: Failed to send Board approval email: " + e.getMessage());
         }
         
-        // Create scorecard
+        // Create scorecard for the CG
         createScorecard(plan);
+        
+        // Now create workplans for CG's appraisees (same logic as approveWorkplan)
+        Workplan wp1 = workPlanRepository.findById(plan.getId()).orElse(null);
+        if (wp1 != null) {
+            // Get the CG's appraisees (people who report to the CG)
+            UserEntity cgUser = userEntityRepository.findById(plan.getUser_email()).orElse(null);
+            List<String> appraiseesList = cgUser != null ? cgUser.getAppraisees() : null;
+            
+            System.out.println("DEBUG: CG user: " + plan.getUser_email());
+            System.out.println("DEBUG: Appraisees list from CG: " + appraiseesList);
+            
+            if (wp1.getWorkplanStatus().equalsIgnoreCase("Approved") || wp1.getWorkplanStatus().equalsIgnoreCase("Ammended")) {
+                if (appraiseesList != null && appraiseesList.size() > 0) {
+                    for (String appraiseeEmail : appraiseesList) {
+                        System.out.println("=== DEBUG: Processing appraisee: " + appraiseeEmail);
+                        
+                        // Calculate weights for this appraisee using the ORIGINAL plan
+                        Dictionary<String, Integer> dictionary = sortWeights(plan, appraiseeEmail);
+                        System.out.println("DEBUG: sortWeights result for " + appraiseeEmail + ": " + dictionary);
+                        
+                        // Debug: Show all indicators and their responsible resources from the original plan
+                        System.out.println("DEBUG: === Full indicator details from original plan ===");
+                        for (WorkplanPerformanceArea wpa : plan.getAreasOfPerformance()) {
+                            for (KPI prog : wpa.getPrograms()) {
+                                for (MPI indicator : prog.getIndicators()) {
+                                    System.out.println("DEBUG: Indicator: " + indicator.getDescription());
+                                    System.out.println("DEBUG:   Responsible resources: " + indicator.getResponsibleResources());
+                                    if (indicator.getResponsibleResources() != null) {
+                                        for (ResponsiblePerson rp : indicator.getResponsibleResources()) {
+                                            System.out.println("DEBUG:     - username: '" + rp.getUsername() + "'");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        System.out.println("DEBUG: === End indicator details ===");
+                        
+                        // Check if this appraisee has any assigned work
+                        boolean hasWork = false;
+                        for (Enumeration<Integer> e = dictionary.elements(); e.hasMoreElements(); ) {
+                            if (e.nextElement() > 0) {
+                                hasWork = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!hasWork) {
+                            System.out.println("DEBUG: Skipping " + appraiseeEmail + " - no assigned work");
+                            continue;
+                        }
+                        
+                        Workplan wp = new Workplan();
+                        if (wp1.getWorkplanStatus().equalsIgnoreCase("Ammended")) {
+                            wp.setWorkplanStatus("PendingAmmendApproval");
+                        }
+                        wp.setWorkplanStatus("Incomplete");
+                        wp.setAppraiser_email(wp1.getUser_email());
+                        wp.setEvaluationPeriod(wp1.getEvaluationPeriod());
+                        wp.setUser_email(appraiseeEmail);
+                        wp.setEvaluator_email(plan.getAppraiser_email());
+                        
+                        List<WorkplanPerformanceArea> areas = new ArrayList<>();
+                        for (WorkplanPerformanceArea wpa : wp1.getAreasOfPerformance()) {
+                            Integer total = dictionary.get(wpa.getPerformanceArea());
+                            System.out.println("DEBUG: Performance Area: " + wpa.getPerformanceArea() + ", Total: " + total);
+                            
+                            WorkplanPerformanceArea area = new WorkplanPerformanceArea();
+                            ArrayList<KPI> newprogs = new ArrayList<>();
+                            ArrayList<KPI> programs = wpa.getPrograms();
+                            
+                            for (KPI prog : programs) {
+                                List<MPI> indicators = prog.getIndicators();
+                                
+                                for (int i = 0; i < indicators.size(); i++) {
+                                    MPI indicator = indicators.get(i);
+                                    float a = indicator.getWeight();
+                                    float b = wpa.getWeight();
+                                    
+                                    // Check if this appraisee is a responsible resource for this indicator
+                                    List<ResponsiblePerson> resources = indicator.getResponsibleResources();
+                                    if (resources != null) {
+                                        for (ResponsiblePerson person : resources) {
+                                            System.out.println("DEBUG: Checking if " + appraiseeEmail + " matches responsible person: " + person.getUsername());
+                                            if (person.getUsername().equalsIgnoreCase(appraiseeEmail)) {
+                                                System.out.println("DEBUG: MATCH FOUND - Adding KPI to " + appraiseeEmail);
+                                                
+                                                KPI kpi = new KPI();
+                                                kpi.setName(indicator.getDescription());
+                                                kpi.setIndicators(new ArrayList<>());
+                                                
+                                                float weight1 = (total != null && total > 0) ? (a * b / total) : 0;
+                                                kpi.setWeight(Math.round(weight1));
+                                                kpi.setContributedPillar(prog.getContributedPillar());
+                                                newprogs.add(kpi);
+                                                break; // Found match, no need to check other resources for this indicator
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            area.setPrograms(newprogs);
+                            area.setPerformanceArea(wpa.getPerformanceArea());
+                            area.setWeight(wpa.getWeight());
+                            area.setSection(wpa.getSection());
+                            area.setDescription(wpa.getDescription());
+                            areas.add(area);
+                        }
+                        wp.setAreasOfPerformance(areas);
+                        
+                        // Remove areas with no programs
+                        List<WorkplanPerformanceArea> wp_areas = wp.getAreasOfPerformance();
+                        for (int w = 0; w < wp_areas.size(); w++) {
+                            List<KPI> wp_programs = wp_areas.get(w).getPrograms();
+                            if (wp_programs == null || wp_programs.isEmpty()) {
+                                wp.getAreasOfPerformance().remove(wp_areas.get(w));
+                                w--;
+                            }
+                        }
+                        
+                        System.out.println("DEBUG: Final areas count for " + appraiseeEmail + ": " + wp.getAreasOfPerformance().size());
+                        
+                        if (wp.getAreasOfPerformance().size() > 0) {
+                            save(wp);
+                            System.out.println("DEBUG: SAVED workplan for: " + appraiseeEmail);
+                            try {
+                                emailService.sendSimpleMessage(
+                                    wp.getUser_email() + domain,
+                                    "New Workplan",
+                                    "Good day you have been assigned a new workplan:\n" +
+                                    "by " + wp.getAppraiser_email() + "\n" +
+                                    "at: " + LocalDateTime.now()
+                                );
+                            } catch (Exception e) {
+                                System.out.println("WARNING: Failed to send email: " + e.getMessage());
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         return "Workplan for " + plan.getUser_email() + " successfully approved by Board";
     }

@@ -14,4 +14,5 @@ import lombok.experimental.SuperBuilder;
 public class AdminProgram extends Base {
     String programName;
     double weight;
+    String contributedPillar;
 }

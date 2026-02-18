@@ -27,7 +27,7 @@ public class PerformanceAreaController {
 
 
     @GetMapping(value = "/allAreas")
-    @PreAuthorize("hasAnyAuthority('VIEW_ALL_PERFORMANCE_AREA')")
+    // @PreAuthorize("hasAnyAuthority('VIEW_ALL_PERFORMANCE_AREA')")
     public ResponseEntity<List<PerformanceArea>> getAllPerformanceAreas() {
 
         return performanceAreaService.getAll();

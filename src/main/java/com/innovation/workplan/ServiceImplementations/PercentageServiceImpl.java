@@ -33,9 +33,18 @@ public class PercentageServiceImpl implements PercentageService {
         Percentage percentage = new Percentage();
         Query query = new Query();
         query.addCriteria(Criteria.where("_id").is(Percentage.SEQUENCE_NAME));
-        DatabaseSequence idList = mongoTemplate.findOne(query, DatabaseSequence.class, "database_sequences");
+        
+        // Check if database_sequences collection exists and has the sequence
+        DatabaseSequence idList = null;
+        try {
+            idList = mongoTemplate.findOne(query, DatabaseSequence.class, "database_sequences");
+        } catch (Exception e) {
+            // Collection doesn't exist, will create it
+            idList = null;
+        }
 
         if (idList == null) {
+            // First time - initialize the sequence and create the performance area
             percentage.setPercent(performanceArea.getWeight());
             percentage.setId(sequenceGenerator.generateSequence(Percentage.SEQUENCE_NAME));
             percentageRepository.save(percentage);
@@ -45,7 +54,30 @@ public class PercentageServiceImpl implements PercentageService {
         } else {
             Query query1 = new Query();
             query1.addCriteria(Criteria.where("_id").is(idList.getSeq()));
-            Percentage percentageList = mongoTemplate.findOne(query1, Percentage.class, "percentage");
+            
+            // Check if percentage collection exists and has data
+            Percentage percentageList = null;
+            try {
+                percentageList = mongoTemplate.findOne(query1, Percentage.class, "percentage");
+            } catch (Exception e) {
+                // Collection doesn't exist, treat as first entry
+                percentage.setPercent(performanceArea.getWeight());
+                percentage.setId(sequenceGenerator.generateSequence(Percentage.SEQUENCE_NAME));
+                percentageRepository.save(percentage);
+                performanceArea.setId(sequenceGenerator.generateSequence(PerformanceArea.SEQUENCE_NAME));
+                performanceAreaRepository.save(performanceArea);
+                return ResponseEntity.status(200).body("Performance Area Saved");
+            }
+
+            if (percentageList == null) {
+                // No percentage record found, treat as first entry
+                percentage.setPercent(performanceArea.getWeight());
+                percentage.setId(sequenceGenerator.generateSequence(Percentage.SEQUENCE_NAME));
+                percentageRepository.save(percentage);
+                performanceArea.setId(sequenceGenerator.generateSequence(PerformanceArea.SEQUENCE_NAME));
+                performanceAreaRepository.save(performanceArea);
+                return ResponseEntity.status(200).body("Performance Area Saved");
+            }
 
             try {
                 if (percentageList.getPercent() >= 100 || percentageList.getPercent() + performanceArea.getWeight() > 100) {

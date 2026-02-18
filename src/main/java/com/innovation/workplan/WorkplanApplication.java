@@ -65,6 +65,8 @@ public class WorkplanApplication {
  		user.setPositionName("Gt");
  		user.setSectionName("Projects");
  		user.setUserRole(new ArrayList<>(List.of("ADMIN","USER")));
+		user.setAppraisees(new ArrayList<>(){{add("mbanda");
+			add("amuchoko");}});
  		userEntityService.save(user);
 
  		UserEntity user2 =new UserEntity();
@@ -117,6 +119,25 @@ public class WorkplanApplication {
  		user4.setAppraiser_status("UnAssigned");
  		user4.setAppraisees(new ArrayList<>());
  		userEntityService.save(user4);
+
+
+		UserEntity user5 =new UserEntity();
+		user5.setUsername("amuchoko");
+		user5.setPassword("1508");
+		user5.setEmail("amuchoko@zimra.co.zw");
+		user5.setEc_number("5134");
+		user5.setGrade("16");
+		user5.setName("Anesu");
+		user5.setSurname("Muchoko");
+		user5.setDivisionName("It");
+		user5.setPositionName("Systems Developer");
+		user5.setSectionName("Projects");
+		user5.setLogAs("user");
+		user5.setUserRole(new ArrayList<>(List.of("USER")));
+
+		user5.setAppraisees(new ArrayList<>(){{add("kmasaya");
+			add("kmachekanyanga");}});
+		userEntityService.save(user5);
 	}
 
 

@@ -36,4 +36,10 @@ public interface ScorecardService {
     List<Scorecard> searchAllScorecards(String period, String scorecardStatus, String grade, String division, String section);
 
     Map<String, Object> getHCSummary(String period);
+
+    // HC Receive Scorecard Method
+    String markScorecardReceivedByHC(Long id, String hcEmail);
+
+    // HC Dashboard comprehensive stats from scorecard data
+    Map<String, Object> getHCDashboardStats(String period);
 }

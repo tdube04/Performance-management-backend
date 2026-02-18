@@ -26,7 +26,7 @@ public class AccountingRatiosContoller {
 
 
     @GetMapping(value = "/allRatios")
-    @PreAuthorize("hasAnyAuthority('VIEW_ALL_RATIOS')")
+    // @PreAuthorize("hasAnyAuthority('VIEW_ALL_RATIOS')")
     public ResponseEntity<List<AccountingRatios>> getAllRatios() {
         return accountingRatiosService.getAllratios();
     }

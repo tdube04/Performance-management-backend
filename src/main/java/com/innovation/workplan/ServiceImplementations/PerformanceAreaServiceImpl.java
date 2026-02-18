@@ -45,40 +45,69 @@ public class PerformanceAreaServiceImpl implements PerformanceAreaService {
         Query query1 = new Query();
         query1.addCriteria(Criteria.where("section").is(performanceArea.getSection()));
 
-        if (mongoTemplate.exists(query1, "performanceArea")){
-            return ResponseEntity.status(400).body("Section already exists");
+        // Check if collection exists, if not, just proceed to save
+        try {
+            if (mongoTemplate.exists(query1, "performanceArea")){
+                return ResponseEntity.status(400).body("Section already exists");
+            }
+        } catch (Exception e) {
+            // Collection doesn't exist, will be created
         }
 
-        if (performanceArea.getWeight() <= 100 && !mongoTemplate.exists(query, "performanceArea")){
+        try {
+            if (performanceArea.getWeight() <= 100 && !mongoTemplate.exists(query, "performanceArea")){
+                return percentageService.savePercentage(performanceArea);
+            }
+            else
+                return ResponseEntity.status(400).body("Performance area already exists");
+        } catch (Exception e) {
+            // Collection doesn't exist, this is the first entry - proceed to save
             return percentageService.savePercentage(performanceArea);
         }
-        else
-            return ResponseEntity.status(400).body("Performance area already exists");
     }
 
     public ResponseEntity<List<PerformanceArea>> getAll() {
-
-        return ResponseEntity.status(200).body(performanceAreaRepository.findAll());
+        try {
+            return ResponseEntity.status(200).body(performanceAreaRepository.findAll());
+        } catch (Exception e) {
+            // Collection doesn't exist yet, return empty list
+            return ResponseEntity.status(200).body(new ArrayList<>());
+        }
     }
 
     public ResponseEntity<List<PerformanceArea>> getActivePerformanceAreas(){
         Query query = new Query();
         query.addCriteria(Criteria.where("active").is(true));
-        return ResponseEntity.status(200).body(mongoTemplate.find(query, PerformanceArea.class, "performanceArea"));
+        try {
+            return ResponseEntity.status(200).body(mongoTemplate.find(query, PerformanceArea.class, "performanceArea"));
+        } catch (Exception e) {
+            // Collection doesn't exist yet, return empty list
+            return ResponseEntity.status(200).body(new ArrayList<>());
+        }
     }
 
     public ResponseEntity<PerformanceArea> getByPerformanceArea(String performanceArea){
         Query query = new Query();
         query.addCriteria(Criteria.where("performanceArea").is(performanceArea));
 
-        return ResponseEntity.status(200).body(mongoTemplate.findOne(query, PerformanceArea.class, "performanceArea"));
+        try {
+            return ResponseEntity.status(200).body(mongoTemplate.findOne(query, PerformanceArea.class, "performanceArea"));
+        } catch (Exception e) {
+            // Collection doesn't exist
+            return ResponseEntity.status(200).body(null);
+        }
     }
 
     public ResponseEntity<PerformanceArea> getByYear(int year){
         Query query = new Query();
         query.addCriteria(Criteria.where("year").is(year));
 
-        return ResponseEntity.status(200).body(mongoTemplate.findOne(query, PerformanceArea.class, "performanceArea"));
+        try {
+            return ResponseEntity.status(200).body(mongoTemplate.findOne(query, PerformanceArea.class, "performanceArea"));
+        } catch (Exception e) {
+            // Collection doesn't exist
+            return ResponseEntity.status(200).body(null);
+        }
     }
 
     public ResponseEntity<String> deactivatePerformanceArea(String performanceArea){
@@ -88,15 +117,27 @@ public class PerformanceAreaServiceImpl implements PerformanceAreaService {
         Percentage percentage = new Percentage();
 
         try {
-            PerformanceArea area = mongoTemplate.findOne(query, PerformanceArea.class);
+            PerformanceArea area = mongoTemplate.findOne(query, PerformanceArea.class, "performanceArea");
+            
+            if (area == null) {
+                return ResponseEntity.status(404).body("Performance area not found");
+            }
 
             Query query2 = new Query();
             query2.addCriteria(Criteria.where("_id").is(Percentage.SEQUENCE_NAME));
             DatabaseSequence idList = mongoTemplate.findOne(query2, DatabaseSequence.class, "database_sequences");
 
+            if (idList == null) {
+                return ResponseEntity.status(405).body("Sequence not found, please initialize the database first");
+            }
+
             Query query1 = new Query();
             query1.addCriteria(Criteria.where("_id").is(idList.getSeq()));
             Percentage percentageList = mongoTemplate.findOne(query1, Percentage.class, "percentage");
+
+            if (percentageList == null) {
+                return ResponseEntity.status(405).body("Percentage record not found");
+            }
 
             percentage.setPercent(percentageList.getPercent() - area.getWeight());
             percentage.setId(sequenceGenerator.generateSequence(Percentage.SEQUENCE_NAME));
@@ -204,15 +245,27 @@ public class PerformanceAreaServiceImpl implements PerformanceAreaService {
         try {
             Query query = new Query();
             query.addCriteria(Criteria.where("_id").is(Id));
-            PerformanceArea performanceArea = mongoTemplate.findOne(query, PerformanceArea.class);
+            PerformanceArea performanceArea = mongoTemplate.findOne(query, PerformanceArea.class, "performanceArea");
+            
+            if (performanceArea == null) {
+                return ResponseEntity.status(404).body("Performance area not found");
+            }
 
             Query query2 = new Query();
             query2.addCriteria(Criteria.where("_id").is(Percentage.SEQUENCE_NAME));
             DatabaseSequence idList = mongoTemplate.findOne(query2, DatabaseSequence.class, "database_sequences");
+            
+            if (idList == null) {
+                return ResponseEntity.status(405).body("Sequence not found, please initialize the database first");
+            }
 
             Query query1 = new Query();
             query1.addCriteria(Criteria.where("_id").is(idList.getSeq()));
             Percentage percentageList = mongoTemplate.findOne(query1, Percentage.class, "percentage");
+            
+            if (percentageList == null) {
+                return ResponseEntity.status(405).body("Percentage record not found");
+            }
 
             percentage.setPercent(percentageList.getPercent() - performanceArea.getWeight());
             percentage.setId(sequenceGenerator.generateSequence(Percentage.SEQUENCE_NAME));

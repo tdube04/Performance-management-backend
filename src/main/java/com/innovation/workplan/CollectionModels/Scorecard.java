@@ -58,6 +58,10 @@ public class Scorecard extends IRBMBase {
     // Status for HC workflow
     private String hcStatus; // PENDING_HC, UNDER_REVIEW_HC, COMPLETED
     
+    // HC Received tracking
+    private LocalDateTime hcReceivedAt;
+    private String hcReceivedBy;
+    
     // Quarter end tracking
     private Boolean submittedAfterQuarterEnd;
     private LocalDateTime quarterEndDate;

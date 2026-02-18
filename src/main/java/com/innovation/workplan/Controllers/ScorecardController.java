@@ -143,4 +143,23 @@ public class ScorecardController {
         return this.scorecardService.getHCSummary(period);
     }
 
+    // HC Mark Scorecard as Received
+    @GetMapping("/hc/markReceived/{id}")
+    @PreAuthorize("hasAnyAuthority('HC_ACCESS', 'ADMIN')")
+    @Operation(summary = "Mark scorecard as received by HC")
+    public String markScorecardReceivedByHC(
+            @PathVariable Long id,
+            @RequestParam(required = true) String hcEmail) {
+        return this.scorecardService.markScorecardReceivedByHC(id, hcEmail);
+    }
+
+    // HC Dashboard Stats Endpoint - Returns comprehensive stats by joining users with scorecards
+    @GetMapping("/hc/dashboardStats")
+    @PreAuthorize("hasAnyAuthority('HC_ACCESS', 'ADMIN')")
+    @Operation(summary = "Get comprehensive HC dashboard stats from scorecard data")
+    public Map<String, Object> getHCDashboardStats(
+            @RequestParam(required = false) String period) {
+        return this.scorecardService.getHCDashboardStats(period);
+    }
+
 }

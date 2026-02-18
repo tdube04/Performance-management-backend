@@ -21,8 +21,11 @@ import org.springframework.stereotype.Service;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 
@@ -511,5 +514,268 @@ public class ScorecardServiceImpl implements ScorecardService {
         summary.put("postQuarterEnd", postQuarterEnd);
         
         return summary;
+    }
+
+    // HC Receive Scorecard Method
+    @Override
+    public String markScorecardReceivedByHC(Long id, String hcEmail) {
+        Scorecard scorecard = scorecardRepository.findById(id).orElse(null);
+        
+        if (scorecard == null) {
+            return "Scorecard not found";
+        }
+        
+        // Verify the scorecard was forwarded to HC
+        if (scorecard.getForwardedToHC() == null || !scorecard.getForwardedToHC()) {
+            return "This scorecard has not been forwarded to HC";
+        }
+        
+        // Verify the HC user exists and has HC access
+        UserEntity hcUser = userEntityRepository.findById(hcEmail).orElse(null);
+        if (hcUser == null) {
+            return "HC user not found";
+        }
+        
+        // Update hcStatus to UNDER_REVIEW_HC and set received date
+        Query query = new Query();
+        query.addCriteria(Criteria.where("_id").is(id));
+        Update updateScorecard = new Update();
+        updateScorecard.set("hcStatus", "UNDER_REVIEW_HC");
+        updateScorecard.set("hcReceivedAt", LocalDateTime.now());
+        updateScorecard.set("hcReceivedBy", hcEmail);
+        
+        mongoTemplate.findAndModify(query, updateScorecard, new FindAndModifyOptions().returnNew(true), Scorecard.class);
+        
+        return "Scorecard marked as received by HC";
+    }
+
+    // HC Dashboard comprehensive stats from scorecard data
+    @Override
+    public Map<String, Object> getHCDashboardStats(String period) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        Query query = new Query();
+        // Filter by period if provided
+        if (period != null && !period.isEmpty()) {
+            query.addCriteria(Criteria.where("evaluationPeriod").is(period));
+        }
+        
+        List<Scorecard> allScorecards = mongoTemplate.find(query, Scorecard.class);
+        
+        // Get all users for joining
+        List<UserEntity> allUsers = userEntityRepository.findAll();
+        Map<String, UserEntity> userMap = new HashMap<>();
+        for (UserEntity user : allUsers) {
+            userMap.put(user.getUsername(), user);
+        }
+        
+        // Calculate stats from scorecards
+        int totalUsers = allUsers.size();
+        int submitted = 0;
+        int pending = 0;
+        int postQuarterEnd = 0;
+        int forwardedToHC = 0;
+        
+        // For division and grade stats
+        Map<String, Map<String, Integer>> divisionStats = new HashMap<>();
+        Map<String, Map<String, Integer>> gradeStats = new HashMap<>();
+        
+        // For score distribution
+        int score6 = 0; // Clearly exceeds
+        int score5 = 0; // Above targets
+        int score4 = 0; // Met targets
+        int score3 = 0; // Below targets within variance
+        int score2 = 0; // Below targets below variance
+        int score1 = 0; // Nothing accomplished
+        
+        // Top and bottom performers
+        List<Map<String, Object>> topPerformers = new ArrayList<>();
+        List<Map<String, Object>> bottomPerformers = new ArrayList<>();
+        
+        for (Scorecard scorecard : allScorecards) {
+            String userEmail = scorecard.getUser_email();
+            UserEntity user = userMap.get(userEmail);
+            
+            if (user == null) continue;
+            
+            String division = user.getDivisionName() != null ? user.getDivisionName() : "Unknown";
+            String grade = user.getGrade() != null ? user.getGrade() : "Unknown";
+            
+            // Initialize division stats
+            if (!divisionStats.containsKey(division)) {
+                divisionStats.put(division, new HashMap<>());
+                divisionStats.get(division).put("total", 0);
+                divisionStats.get(division).put("submitted", 0);
+                divisionStats.get(division).put("pending", 0);
+            }
+            
+            // Initialize grade stats
+            if (!gradeStats.containsKey(grade)) {
+                gradeStats.put(grade, new HashMap<>());
+                gradeStats.get(grade).put("total", 0);
+                gradeStats.get(grade).put("submitted", 0);
+                gradeStats.get(grade).put("pending", 0);
+            }
+            
+            divisionStats.get(division).put("total", divisionStats.get(division).get("total") + 1);
+            gradeStats.get(grade).put("total", gradeStats.get(grade).get("total") + 1);
+            
+            // Check if scorecard has been submitted (has a status)
+            String scorecardStatus = scorecard.getScorecardStatus();
+            boolean isSubmitted = scorecardStatus != null && 
+                ("Approved".equals(scorecardStatus) || "ResultsScorecard".equals(scorecardStatus));
+            
+            if (isSubmitted) {
+                submitted++;
+                divisionStats.get(division).put("submitted", divisionStats.get(division).get("submitted") + 1);
+                gradeStats.get(grade).put("submitted", gradeStats.get(grade).get("submitted") + 1);
+                
+                // Check if forwarded to HC
+                if (scorecard.getForwardedToHC() != null && scorecard.getForwardedToHC()) {
+                    forwardedToHC++;
+                }
+                
+                // Check if post quarter end
+                if (scorecard.getSubmittedAfterQuarterEnd() != null && scorecard.getSubmittedAfterQuarterEnd()) {
+                    postQuarterEnd++;
+                }
+                
+                // Calculate score distribution based on total score
+                double totalScore = scorecard.getTotal_overal_weighted_score();
+                if (totalScore >= 90) {
+                    score6++;
+                } else if (totalScore >= 80) {
+                    score5++;
+                } else if (totalScore >= 70) {
+                    score4++;
+                } else if (totalScore >= 60) {
+                    score3++;
+                } else if (totalScore >= 50) {
+                    score2++;
+                } else {
+                    score1++;
+                }
+                
+                // Add to performers lists
+                Map<String, Object> performer = new HashMap<>();
+                performer.put("username", userEmail);
+                performer.put("name", user.getName());
+                performer.put("surname", user.getSurname());
+                performer.put("divisionName", division);
+                performer.put("positionName", user.getPositionName());
+                performer.put("totalScore", totalScore);
+                performer.put("submissionDate", scorecard.getDateSubmitted());
+                
+                topPerformers.add(performer);
+                bottomPerformers.add(performer);
+                
+            } else {
+                pending++;
+                divisionStats.get(division).put("pending", divisionStats.get(division).get("pending") + 1);
+                gradeStats.get(grade).put("pending", gradeStats.get(grade).get("pending") + 1);
+            }
+        }
+        
+        // Sort performers by score
+        topPerformers.sort((a, b) -> Double.compare((Double) b.get("totalScore"), (Double) a.get("totalScore")));
+        bottomPerformers.sort((a, b) -> Double.compare((Double) a.get("totalScore"), (Double) b.get("totalScore")));
+        
+        // Get recent submissions
+        List<Map<String, Object>> recentSubmissions = new ArrayList<>();
+        for (Scorecard scorecard : allScorecards) {
+            if (scorecard.getDateSubmitted() != null && "Approved".equals(scorecard.getScorecardStatus())) {
+                String userEmail = scorecard.getUser_email();
+                UserEntity user = userMap.get(userEmail);
+                if (user != null) {
+                    Map<String, Object> submission = new HashMap<>();
+                    submission.put("username", userEmail);
+                    submission.put("name", user.getName());
+                    submission.put("surname", user.getSurname());
+                    submission.put("divisionName", user.getDivisionName());
+                    submission.put("submissionDate", scorecard.getDateSubmitted());
+                    recentSubmissions.add(submission);
+                }
+            }
+        }
+        recentSubmissions.sort((a, b) -> {
+            LocalDateTime dateA = (LocalDateTime) a.get("submissionDate");
+            LocalDateTime dateB = (LocalDateTime) b.get("submissionDate");
+            return dateB.compareTo(dateA);
+        });
+        
+        // Build user-scorecard mapping for frontend users list
+        List<Map<String, Object>> userScorecardList = new ArrayList<>();
+        for (UserEntity user : allUsers) {
+            Map<String, Object> userScorecardInfo = new HashMap<>();
+            userScorecardInfo.put("username", user.getUsername());
+            userScorecardInfo.put("name", user.getName());
+            userScorecardInfo.put("surname", user.getSurname());
+            userScorecardInfo.put("grade", user.getGrade());
+            userScorecardInfo.put("divisionName", user.getDivisionName());
+            userScorecardInfo.put("sectionName", user.getSectionName());
+            userScorecardInfo.put("positionName", user.getPositionName());
+            userScorecardInfo.put("email", user.getEmail());
+            userScorecardInfo.put("ec_number", user.getEc_number());
+            
+            // Find matching scorecard for this user
+            Scorecard userScorecard = null;
+            for (Scorecard sc : allScorecards) {
+                if (sc.getUser_email() != null && sc.getUser_email().equals(user.getUsername())) {
+                    userScorecard = sc;
+                    break;
+                }
+            }
+            
+            if (userScorecard != null) {
+                String scorecardStatus = userScorecard.getScorecardStatus();
+                boolean isSubmitted = scorecardStatus != null && 
+                    ("Approved".equals(scorecardStatus) || "ResultsScorecard".equals(scorecardStatus));
+                
+                userScorecardInfo.put("hasSubmittedScorecard", isSubmitted);
+                userScorecardInfo.put("submissionDate", userScorecard.getDateSubmitted());
+                userScorecardInfo.put("submittedAfterQuarterEnd", userScorecard.getSubmittedAfterQuarterEnd());
+                userScorecardInfo.put("scorecardStatus", scorecardStatus);
+                userScorecardInfo.put("scorecardId", userScorecard.getId());
+                userScorecardInfo.put("totalScore", userScorecard.getTotal_overal_weighted_score());
+                userScorecardInfo.put("forwardedToHC", userScorecard.getForwardedToHC());
+            } else {
+                userScorecardInfo.put("hasSubmittedScorecard", false);
+                userScorecardInfo.put("submissionDate", null);
+                userScorecardInfo.put("submittedAfterQuarterEnd", false);
+                userScorecardInfo.put("scorecardStatus", null);
+                userScorecardInfo.put("scorecardId", null);
+                userScorecardInfo.put("totalScore", null);
+                userScorecardInfo.put("forwardedToHC", false);
+            }
+            
+            userScorecardList.add(userScorecardInfo);
+        }
+        
+        // Calculate compliance rate
+        int complianceRate = totalUsers > 0 ? Math.round((float) submitted / totalUsers * 100) : 0;
+        
+        // Set all stats
+        stats.put("totalUsers", totalUsers);
+        stats.put("submitted", submitted);
+        stats.put("pending", pending);
+        stats.put("postQuarterEnd", postQuarterEnd);
+        stats.put("forwardedToHC", forwardedToHC);
+        stats.put("complianceRate", complianceRate);
+        stats.put("divisionStats", divisionStats);
+        stats.put("gradeStats", gradeStats);
+        stats.put("scoreDistribution", Map.of(
+            "score6", score6,
+            "score5", score5,
+            "score4", score4,
+            "score3", score3,
+            "score2", score2,
+            "score1", score1
+        ));
+        stats.put("topPerformers", topPerformers.stream().limit(5).collect(Collectors.toList()));
+        stats.put("bottomPerformers", bottomPerformers.stream().limit(5).collect(Collectors.toList()));
+        stats.put("recentSubmissions", recentSubmissions.stream().limit(10).collect(Collectors.toList()));
+        stats.put("userScorecardList", userScorecardList);
+        
+        return stats;
     }
 }

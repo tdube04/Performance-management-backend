@@ -67,7 +67,9 @@ public class MySecurityConfiguration extends WebSecurityConfigurerAdapter {
                         "http://10.45.0.214:5173/",
                         "http://localhost:3001/",
                         "http://10.45.0.229:5173",
-                        "http://10.18.6.193:8080/temp-login"
+                        "http://10.18.6.193:8080/temp-login",
+                        "http://172.20.10.4:8080/temp-login",
+                        "http://172.20.10.4:8080"
 
 
                         )

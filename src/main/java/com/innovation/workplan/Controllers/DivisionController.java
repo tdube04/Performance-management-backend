@@ -24,7 +24,7 @@ public class DivisionController {
 
 
     @GetMapping(value = "/allDivisions")
-    @PreAuthorize("hasAnyAuthority('VIEW_ALL_DIVISION')")
+    // @PreAuthorize("hasAnyAuthority('VIEW_ALL_DIVISION')")
     public ResponseEntity<List<Division>> getAllDivisions() {
         return divisionService.getAll();
     }
