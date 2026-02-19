@@ -138,6 +138,24 @@ public class WorkplanApplication {
 		user5.setAppraisees(new ArrayList<>(){{add("kmasaya");
 			add("kmachekanyanga");}});
 		userEntityService.save(user5);
+
+
+		UserEntity user6 =new UserEntity();
+		user6.setUsername("kmasaya");
+		user6.setPassword("1508");
+		user6.setEmail("kmasaya@zimra.co.zw");
+		user6.setEc_number("5134");
+		user6.setGrade("16");
+		user6.setName("Kuda");
+		user6.setSurname("Masaya");
+		user6.setDivisionName("It");
+		user6.setPositionName("Systems Developer");
+		user6.setSectionName("Projects");
+		user6.setLogAs("user");
+		user6.setUserRole(new ArrayList<>(List.of("USER")));
+
+		user5.setAppraisees(new ArrayList<>(){});
+		userEntityService.save(user6);
 	}
 
 

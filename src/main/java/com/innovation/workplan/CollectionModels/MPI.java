@@ -19,10 +19,10 @@ public class MPI {
     private String measurement_unit;
     private String incremental_or_decremental;
     private Integer weight;
-    private int quarterly_target;
-    private int annual_target;
-    private int Previous_year_Perfomenace;
-    private int allowable_variance;
+    private String quarterly_target;
+    private String annual_target;
+    private String Previous_year_Perfomenace;
+    private String allowable_variance;
 
 //    private int actual_perfomance;
 //    private float agreedWeightedScore;

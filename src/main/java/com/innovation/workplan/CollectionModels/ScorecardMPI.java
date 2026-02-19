@@ -20,11 +20,11 @@ public class ScorecardMPI {
 
     private int weight;
 
-    private int quarterly_target;
+    private String quarterly_target;
 
-    private int annual_target;
-    private int Previous_year_Perfomenace;
-    private int allowable_variance;
+    private String annual_target;
+    private String Previous_year_Perfomenace;
+    private String allowable_variance;
 
     private int appraisee_actual_perfomance;
     private int appraisor_actual_perfomance;
