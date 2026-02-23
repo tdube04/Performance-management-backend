@@ -1,6 +1,7 @@
 package com.innovation.workplan.ServiceImplementations;
 
 import com.innovation.workplan.CollectionModels.Scorecard;
+import com.innovation.workplan.CollectionModels.ScorecardPerformanceArea;
 import com.innovation.workplan.CollectionModels.UserEntity;
 import com.innovation.workplan.CollectionModels.Workplan;
 import com.innovation.workplan.Configuration.SecurityUtils;
@@ -40,8 +41,47 @@ public class ScorecardServiceImpl implements ScorecardService {
     SequenceGeneratorService sequenceGenerator;
     @Autowired
     private MongoTemplate mongoTemplate;
+    
+    // Helper method to filter out empty performance areas and programs
+    private Scorecard filterEmptyPerformanceAreas(Scorecard scorecard) {
+        if (scorecard.getAreasOfPerformance() == null) {
+            return scorecard;
+        }
+        
+        List<ScorecardPerformanceArea> filteredAreas = new ArrayList<>();
+        
+        for (ScorecardPerformanceArea area : scorecard.getAreasOfPerformance()) {
+            // Skip empty performance areas
+            if (area.getPerformanceArea() == null || area.getPerformanceArea().trim().isEmpty()) {
+                continue;
+            }
+            
+            // Filter out programs with empty names
+            if (area.getPrograms() != null) {
+                List<com.innovation.workplan.CollectionModels.KPI> filteredPrograms = new ArrayList<>();
+                for (com.innovation.workplan.CollectionModels.KPI program : area.getPrograms()) {
+                    if (program.getName() != null && !program.getName().trim().isEmpty()) {
+                        filteredPrograms.add(program);
+                    }
+                }
+                area.setPrograms(filteredPrograms);
+            }
+            
+            // Only add areas that have valid programs
+            if (area.getPrograms() != null && !area.getPrograms().isEmpty()) {
+                filteredAreas.add(area);
+            }
+        }
+        
+        scorecard.setAreasOfPerformance(filteredAreas);
+        return scorecard;
+    }
+    
     @Override
     public Long saveScorecard(Scorecard scorecard) {
+        // Filter out empty performance areas before saving
+        scorecard = filterEmptyPerformanceAreas(scorecard);
+        
         Query query = new Query();
         query.addCriteria(Criteria.where("id").is(scorecard.getId()));
         if (mongoTemplate.exists(query, "Scorecards_tbl")){
@@ -149,6 +189,9 @@ public class ScorecardServiceImpl implements ScorecardService {
         System.out.println("Scorecard ID: " + scorecard.getId());
         System.out.println("Scorecard Status: " + scorecard.getScorecardStatus());
         System.out.println("User Email: " + scorecard.getUser_email());
+        
+        // Filter out empty performance areas before updating
+        scorecard = filterEmptyPerformanceAreas(scorecard);
         
         if (scorecard.getScorecardStatus().toString().equalsIgnoreCase("WorkingScorecard") || scorecard
                 .getScorecardStatus().toString().equalsIgnoreCase("ResultsScorecard")) {

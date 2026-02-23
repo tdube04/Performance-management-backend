@@ -65,8 +65,46 @@ public class WorkplanServiceImpl implements WorkPlanService {
     @Autowired
     UserEntityRepository userEntityRepository;
 
+    // Helper method to filter out empty performance areas and programs
+    private Workplan filterEmptyPerformanceAreas(Workplan workplan) {
+        if (workplan.getAreasOfPerformance() == null) {
+            return workplan;
+        }
+        
+        List<WorkplanPerformanceArea> filteredAreas = new ArrayList<>();
+        
+        for (WorkplanPerformanceArea area : workplan.getAreasOfPerformance()) {
+            // Skip empty performance areas
+            if (area.getPerformanceArea() == null || area.getPerformanceArea().trim().isEmpty()) {
+                continue;
+            }
+            
+            // Filter out programs with empty names
+            if (area.getPrograms() != null) {
+                List<KPI> filteredPrograms = new ArrayList<>();
+                for (KPI program : area.getPrograms()) {
+                    if (program.getName() != null && !program.getName().trim().isEmpty()) {
+                        filteredPrograms.add(program);
+                    }
+                }
+                area.setPrograms(filteredPrograms);
+            }
+            
+            // Only add areas that have valid programs
+            if (area.getPrograms() != null && !area.getPrograms().isEmpty()) {
+                filteredAreas.add(area);
+            }
+        }
+        
+        workplan.setAreasOfPerformance(filteredAreas);
+        return workplan;
+    }
+
     @Override
     public long save(Workplan workplan) {
+        // Filter out empty performance areas before saving
+        workplan = filterEmptyPerformanceAreas(workplan);
+        
         Query query = new Query();
         query.addCriteria(Criteria.where("id").is(workplan.getId()));
 
@@ -955,6 +993,9 @@ public class WorkplanServiceImpl implements WorkPlanService {
 
     @Override
     public Workplan update(Workplan workplan) {
+        // Filter out empty performance areas before updating
+        workplan = filterEmptyPerformanceAreas(workplan);
+        
         boolean valid=false;
 
         if (workplan.getWorkplanStatus().toString().equalsIgnoreCase("pendingApproval")) {
