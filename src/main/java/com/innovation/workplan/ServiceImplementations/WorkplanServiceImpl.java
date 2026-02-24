@@ -81,7 +81,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
             
             // Filter out programs with empty names
             if (area.getPrograms() != null) {
-                List<KPI> filteredPrograms = new ArrayList<>();
+                ArrayList<KPI> filteredPrograms = new ArrayList<>();
                 for (KPI program : area.getPrograms()) {
                     if (program.getName() != null && !program.getName().trim().isEmpty()) {
                         filteredPrograms.add(program);
@@ -317,7 +317,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
                                                     kpi.setIndicators(new ArrayList<>());
 //                                                    int final_weight=Math.round(weight1);
 
-                                                    weight1=(a*b/total);
+                                                    weight1 = a; 
 
                                                     kpi.setWeight(Math.round(weight1));
 //                                                    kpi.setWeight(Math.round(weight1));
@@ -462,7 +462,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
                                                         kpi.setIndicators(new ArrayList<>());
 //                                                    int final_weight=Math.round(weight1);
 
-                                                        weight1=(a*b/total);
+                                                        weight1 = a; // Use indicator weight directly
 
                                                         kpi.setWeight(Math.round(weight1));
 //                                                    kpi.setWeight(Math.round(weight1));
@@ -589,8 +589,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
                                                     kpi.setName(indicators.get(i).getDescription());
                                                     kpi.setIndicators(new ArrayList<>());
 //                                                    int final_weight=Math.round(weight1);
-
-                                                    weight1=(a*b/total);
+weight1 = a; weight1=(a*b/total);
 
                                                     kpi.setWeight(Math.round(weight1));
 //                                                    kpi.setWeight(Math.round(weight1));
@@ -1421,7 +1420,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
                                                 kpi.setName(indicator.getDescription());
                                                 kpi.setIndicators(new ArrayList<>());
                                                 
-                                                float weight1 = (total != null && total > 0) ? (a * b / total) : 0;
+                                                float weight1 = a; // Use indicator weight directly
                                                 kpi.setWeight(Math.round(weight1));
                                                 kpi.setContributedPillar(prog.getContributedPillar());
                                                 newprogs.add(kpi);

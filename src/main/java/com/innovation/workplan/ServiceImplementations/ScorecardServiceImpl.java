@@ -58,8 +58,8 @@ public class ScorecardServiceImpl implements ScorecardService {
             
             // Filter out programs with empty names
             if (area.getPrograms() != null) {
-                List<com.innovation.workplan.CollectionModels.KPI> filteredPrograms = new ArrayList<>();
-                for (com.innovation.workplan.CollectionModels.KPI program : area.getPrograms()) {
+                ArrayList<com.innovation.workplan.CollectionModels.ScorecardKPI> filteredPrograms = new ArrayList<>();
+                for (com.innovation.workplan.CollectionModels.ScorecardKPI program : area.getPrograms()) {
                     if (program.getName() != null && !program.getName().trim().isEmpty()) {
                         filteredPrograms.add(program);
                     }
