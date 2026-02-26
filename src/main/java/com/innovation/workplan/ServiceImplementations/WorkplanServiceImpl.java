@@ -589,7 +589,7 @@ public class WorkplanServiceImpl implements WorkPlanService {
                                                     kpi.setName(indicators.get(i).getDescription());
                                                     kpi.setIndicators(new ArrayList<>());
 //                                                    int final_weight=Math.round(weight1);
-weight1 = a; weight1=(a*b/total);
+                                                    weight1 = a; // Use indicator weight directly - preserves original weight through all inheritance levels
 
                                                     kpi.setWeight(Math.round(weight1));
 //                                                    kpi.setWeight(Math.round(weight1));
