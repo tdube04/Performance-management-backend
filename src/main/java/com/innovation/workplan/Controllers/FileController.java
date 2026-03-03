@@ -3,8 +3,6 @@ package com.innovation.workplan.Controllers;
 
 
 
-
-
 import com.innovation.workplan.CollectionModels.LoadFile;
 import com.innovation.workplan.Services.FileService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +44,22 @@ public class FileController {
                 .body(new ByteArrayResource(loadFile.getFile()));
     }
 
+    /**
+     * View file inline - serves file for viewing in browser/external viewers instead of downloading.
+     * This endpoint is permitted without authentication (configured in MySecurityConfiguration).
+     * Use this for embedding PDFs, images, or passing to external viewers like Microsoft Office Online.
+     * 
+     * @param id The file ID to view
+     * @return The file content with inline Content-Disposition for viewing
+     */
+    @GetMapping("/view/{id}")
+    public ResponseEntity<ByteArrayResource> viewInline(@PathVariable String id) throws IOException {
+        LoadFile loadFile = fileService.downloadFile(id);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(loadFile.getFileType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + loadFile.getFilename() + "\"")
+                .body(new ByteArrayResource(loadFile.getFile()));
+    }
+
 }
-
-
