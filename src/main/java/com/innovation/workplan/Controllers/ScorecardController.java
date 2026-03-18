@@ -31,7 +31,7 @@ public class ScorecardController {
 
 
     @GetMapping("/searchScorecard")
-    @PreAuthorize("hasAnyAuthority('SEARCH_SCORECARD')")
+    @PreAuthorize("hasAnyAuthority('SEARCH_SCORECARD', 'HC_ACCESS', 'ADMIN')")
     public Page<Scorecard> searchScorecard(
             @RequestParam (required=false) Long id,
             @RequestParam (required=false) String username,
