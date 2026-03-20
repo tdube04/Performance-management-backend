@@ -128,6 +128,7 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
     if (ue != null) {
         ue.setLogAs("admin");
         userEntityRepository.save(ue);
+        authenticationResponse.setUserFound(true);
     }
     
     UserEntity userEntity = userEntityService.getUser(authenticationRequest.getUsername());
@@ -162,6 +163,7 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
         }
     } else {
         System.out.println("User not found or does not have ADMIN role");
+        authenticationResponse.setUserFound(false);
         authenticationResponse.setJwtToken(null);
     }
     return ResponseEntity.ok(authenticationResponse);
@@ -188,6 +190,7 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
             userEntityRepository.save(ue);
 
             authenticationResponse = new JwtResponse();
+            authenticationResponse.setUserFound(true);
             System.out.println("Generating temporary token for: " + authenticationRequest.getUsername());
             userDetails = myCustomUserDetailsService.loadUserByUsername(authenticationRequest.getUsername());
             authenticationResponse.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
@@ -195,6 +198,7 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
         } else {
             System.out.println("User not found in database: " + authenticationRequest.getUsername());
             authenticationResponse = new JwtResponse();
+            authenticationResponse.setUserFound(false);
             authenticationResponse.setJwtToken(null);
         }
         System.out.println("Returning temp jwtToken: " + (authenticationResponse != null ? authenticationResponse.getJwtToken() : "null"));
@@ -223,6 +227,8 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
             userEntityRepository.save(ue);
 
             authenticationResponse = new JwtResponse();
+            authenticationResponse.setUserFound(true);
+            authenticationResponse.setUserRole(ue.getUserRole());
             try {
                 // Change from GET to POST
                 HttpHeaders headers = new HttpHeaders();
@@ -267,10 +273,44 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
         } else {
             System.out.println("UserEntity is null, setting response to null");
             authenticationResponse = new JwtResponse();
+            authenticationResponse.setUserFound(false);
+            authenticationResponse.setUserRole(null);
             authenticationResponse.setJwtToken(null);
         }
         System.out.println("Returning jwtToken: " + (authenticationResponse != null ? authenticationResponse.getJwtToken() : "null"));
         return ResponseEntity.ok(authenticationResponse);
+    }
+
+    @PostMapping("/selectRole")
+    @Operation(summary = "Update user role selection (logAs field)")
+    public ResponseEntity<?> selectRole(@RequestBody RoleSelectionRequest request) throws Exception {
+        System.out.println("Role selection request for username: " + request.getUsername() + " to role: " + request.getRole());
+        
+        UserEntity ue = userEntityService.getUser(request.getUsername());
+        if (ue != null) {
+            // Validate that the role is in the user's roles
+            if (ue.getUserRole() != null && ue.getUserRole().contains(request.getRole())) {
+                ue.setLogAs(request.getRole().toLowerCase());
+                userEntityRepository.save(ue);
+                
+                // Generate new token with updated role
+                JwtResponse response = new JwtResponse();
+                response.setUserFound(true);
+                response.setUserRole(ue.getUserRole());
+                
+                userDetails = myCustomUserDetailsService.loadUserByUsername(request.getUsername());
+                response.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
+                
+                System.out.println("Role updated successfully to: " + request.getRole());
+                return ResponseEntity.ok(response);
+            } else {
+                System.out.println("Role not found in user's roles");
+                return ResponseEntity.badRequest().body("Invalid role selection");
+            }
+        } else {
+            System.out.println("User not found");
+            return ResponseEntity.notFound().build();
+        }
     }
 
 //    @PostMapping("/forget-password/{email}")

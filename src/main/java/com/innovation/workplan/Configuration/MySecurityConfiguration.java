@@ -50,6 +50,7 @@ public class MySecurityConfiguration extends WebSecurityConfigurerAdapter {
                              "/adminlogin",
                              "/temp-login",
                              "/saveUser",
+                             "/selectRole",
 //                        "/workplan/updateWorkplan/{id}",
                      //     "/scorecard/searchScorecardByEvaluator",
                                 "/logout",
