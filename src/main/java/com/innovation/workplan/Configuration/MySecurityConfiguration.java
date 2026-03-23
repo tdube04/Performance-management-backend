@@ -71,7 +71,9 @@ public class MySecurityConfiguration extends WebSecurityConfigurerAdapter {
                         "http://10.45.0.229:5173",
                         "http://10.18.6.193:8080/temp-login",
                         "http://172.20.10.4:8080/temp-login",
-                        "http://172.20.10.4:8080"
+                        "http://172.20.10.4:8080",
+                        "http://10.18.6.218:8080",
+                        "http://10.18.6.139:8080"
 
 
                         )
@@ -93,7 +95,9 @@ public class MySecurityConfiguration extends WebSecurityConfigurerAdapter {
                 "http://localhost:5173/",
                 "http://10.45.0.229:5173",
                 "http://10.45.0.122:5173/",
-                "http://10.45.0.214:5173/"));
+                "http://10.45.0.214:5173/",
+                "http://10.18.6.139:8080",
+                "http://10.18.6.139:5173"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

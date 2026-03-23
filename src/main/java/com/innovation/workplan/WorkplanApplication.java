@@ -15,10 +15,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 
 import org.springframework.context.annotation.Lazy;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,6 +33,16 @@ import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 @Component("com.innovation.workplan")
 
 public class WorkplanApplication {
+	private static final Logger logger = LoggerFactory.getLogger(WorkplanApplication.class);
+	
+	// Default Super Admin credentials - override with environment variables
+	private static final String SUPER_ADMIN_USERNAME = System.getenv("SUPER_ADMIN_USERNAME") != null ? 
+		System.getenv("SUPER_ADMIN_USERNAME") : "superadmin";
+	private static final String SUPER_ADMIN_PASSWORD = System.getenv("SUPER_ADMIN_PASSWORD") != null ? 
+		System.getenv("SUPER_ADMIN_PASSWORD") : "SuperAdmin@123";
+	private static final String SUPER_ADMIN_EMAIL = System.getenv("SUPER_ADMIN_EMAIL") != null ? 
+		System.getenv("SUPER_ADMIN_EMAIL") : "superadmin@zimra.co.zw";
+	
 	@Lazy
 	@Autowired
 	private UserEntityService userEntityService;
@@ -46,10 +58,82 @@ public class WorkplanApplication {
 
 	@Bean
 	public PasswordEncoder getPasswordEncoder(){
-		return NoOpPasswordEncoder.getInstance();
+		// Using BCrypt with strength 12 (default rounds = 10, but 12 is more secure)
+		return new BCryptPasswordEncoder(12);
 	}
 
 
+	@Bean
+	public void seedSuperAdmin(){
+		try {
+			// Check if super admin already exists
+			if (userEntityService.findByUsername(SUPER_ADMIN_USERNAME) != null) {
+				logger.info("Super Admin account already exists - skipping seed");
+				return;
+			}
+			
+			// Validate password strength
+			if (!isValidPassword(SUPER_ADMIN_PASSWORD)) {
+				logger.warn("Super Admin password does not meet strength requirements. Using default.");
+				logger.warn("Password requirements: minimum 8 characters, at least one uppercase, one lowercase, one number and one special character");
+			}
+			
+			// Create Super Admin user
+			UserEntity superAdmin = new UserEntity();
+			superAdmin.setUsername(SUPER_ADMIN_USERNAME);
+			
+			// Hash password with BCrypt
+			String hashedPassword = org.mindrot.jbcrypt.BCrypt.hashpw(SUPER_ADMIN_PASSWORD, org.mindrot.jbcrypt.BCrypt.gensalt(12));
+			superAdmin.setPassword(hashedPassword);
+			
+			superAdmin.setEmail(SUPER_ADMIN_EMAIL);
+			superAdmin.setEc_number("SUPER001");
+			superAdmin.setGrade("18");
+			superAdmin.setName("Super");
+			superAdmin.setSurname("Administrator");
+			superAdmin.setDivisionName("IT");
+			superAdmin.setPositionName("System Administrator");
+			superAdmin.setSectionName("Administration");
+			superAdmin.setLogAs("superadmin");
+			superAdmin.setUserRole(new ArrayList<>(List.of("SUPER_ADMIN", "ADMIN", "USER", "HC", "BOARD")));
+			superAdmin.setEnabled(true);
+			superAdmin.setAppraiser_status("UnAssigned");
+			superAdmin.setAppraisees(new ArrayList<>());
+			
+			userEntityService.save(superAdmin);
+			
+			logger.info("Super Admin account created successfully with username: {}", SUPER_ADMIN_USERNAME);
+			logger.info("Password has been hashed with BCrypt (strength: 12 rounds)");
+			
+		} catch (Exception e) {
+			logger.error("Failed to seed Super Admin account: {}", e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * Validates password strength
+	 * Requirements: minimum 8 characters, at least one uppercase, one lowercase, one number and one special character
+	 */
+	private boolean isValidPassword(String password) {
+		if (password == null || password.length() < 8) {
+			return false;
+		}
+		
+		boolean hasUppercase = false;
+		boolean hasLowercase = false;
+		boolean hasDigit = false;
+		boolean hasSpecial = false;
+		
+		for (char c : password.toCharArray()) {
+			if (Character.isUpperCase(c)) hasUppercase = true;
+			else if (Character.isLowerCase(c)) hasLowercase = true;
+			else if (Character.isDigit(c)) hasDigit = true;
+			else hasSpecial = true;
+		}
+		
+		return hasUppercase && hasLowercase && hasDigit && hasSpecial;
+	}
+	
 	@Bean
 	public void addUser(){
 
@@ -107,7 +191,7 @@ public class WorkplanApplication {
  		user4.setPassword("hcpass123");
  		user4.setEmail("hc@zimra.co.zw");
  		user4.setEc_number("HC001");
- 		user4.setGrade("1");
+ 		user4.setGrade("17");
  		user4.setName("Human Capital");
  		user4.setSurname("Administrator");
  		user4.setDivisionName("Human Capital");
@@ -161,6 +245,110 @@ public class WorkplanApplication {
 
 	@Bean
 	public void addGroup(){
+		// SUPER ADMIN Group - Full system access
+		UserGroup superAdminGroup = new UserGroup();
+		superAdminGroup.setName("SUPER_ADMIN");
+		List<String> superAdminPerms = Arrays.asList(
+			"CLOSE_EVALUATION_PERIOD",
+			"OPEN_EVALUATION_PERIOD",
+			"UPDATE_QUARTER",
+			"SAVE_QUARTER",
+			"GET_ALL_QUARTERS",
+			"SEARCH_USER_BY_GRADE",
+			"SEARCH_USER_BY_DIVISION",
+			"VIEW_USER",
+			"VIEW_ALL_USER",
+			"SAVE_USER",
+			"UPDATE_USER",
+			"DELETE_USER",
+			"SEARCH_USER",
+			"SEARCH_ALL_USER",
+			"SHOW_PDF",
+			"SHOW_SCORECARD_PDF",
+			"VIEW_ACTIVE_PILLARS",
+			"SAVE_DIVISION",
+			"VIEW_ALL_DIVISION",
+			"DELETE_DIVISION",
+			"UPDATE_DIVISION",
+			"ADD_SECTION",
+			"DELETE_SECTION",
+			"DEACTIVATE_DIVISION",
+			"DOWNLOAD_FILE",
+			"UPLOAD_FILE",
+			"SAVE_GRADE",
+			"VIEW_GRADE",
+			"DELETE_GRADE",
+			"SAVE_GROUP",
+			"UPDATE_GROUP",
+			"SEARCH_GROUP",
+			"DELETE_GROUP",
+			"SAVE_PERFORMANCE_AREA",
+			"VIEW_ALL_PERFORMANCE_AREA",
+			"DELETE_PERFORMANCE_AREA",
+			"UPDATE_PERFORMANCE_AREA",
+			"DELETE_PROGRAM",
+			"ADD_PROGRAM",
+			"FIND_ACTIVE_PERFORMANCE_AREA",
+			"VIEW_ALL_ACTIVE_DIVISIONS",
+			"DEACTIVATE_PERFORMANCE_AREA",
+			"SAVE_PILLAR",
+			"VIEW_ALL_PILLAR",
+			"VIEW_PILLAR",
+			"DELETE_PILLAR",
+			"UPDATE_PILLAR",
+			"DEACTIVATE_PILLAR",
+			"VIEW_RIGHTS",
+			"SAVE_RIGHTS",
+			"SAVE_SCORECARD",
+			"SEARCH_SCORECARD_BY_APPRAISEE",
+			"SEARCH_SCORECARD",
+			"UPDATE_SCORECARD",
+			"SHOW_SCORECARD_PDF",
+			"SEARCH_SCORECARD_BY_EVALUATOR",
+			"SEARCH_SCORECARD_BY_STATUS",
+			"UPLOAD_SIGNATURE",
+			"DOWNLOAD_SIGNATURE",
+			"FIND_PERFORMANCE_AREA",
+			"GET_USER",
+			"GET_ALL_USERS",
+			"SEARCH_USER",
+			"DELETE_USER",
+			"UPDATE_USER",
+			"ASSIGN_APPRAISER",
+			"DELETE_APPRAISER",
+			"ASSIGN_APPRAISEES",
+			"UPDATE_APPRAISEES",
+			"GET_APPRAISEES",
+			"SAVE_WORKPLAN",
+			"SEARCH_WORKPLAN",
+			"APPROVE_WORKPLAN",
+			"DISAPPROVE_WORKPLAN",
+			"DELETE_INDICATOR",
+			"SHOW_PDF",
+			"UPDATE_WORKPLAN",
+			"SEARCH_WORKPLAN_BY_APPRAISER",
+			"SEARCH_WORKPLAN_BY_EVALUATOR",
+			"SEARCH_WORKPLAN_BY_APPRAISEE",
+			"SEARCH_WORKPLAN_BY_STATUS",
+			"FIND_UNIT",
+			"SAVE_UNIT_OF_MEASURE",
+			"UPDATE_UNIT",
+			"DELETE_UNIT",
+			"VIEW_ALL_UNITS_OF_MEASURE",
+			"DELETE_UNIT_PERMANENTLY",
+			"UPDATE_RATIO",
+			"DELETE_RATIO",
+			"VIEW_ALL_RATIOS",
+			"SAVE_RATIO",
+			"GET_ALL_PERMISSIONS",
+			// Super Admin specific permissions
+			"MANAGE_SUPER_ADMIN",
+			"OVERRIDE_ADMIN_RESTRICTIONS",
+			"MANAGE_ALL_ADMINS"
+		);
+		superAdminGroup.setPermissions(superAdminPerms);
+		groupService.save(superAdminGroup);
+		logger.info("Super Admin group created with full system permissions");
  		UserGroup group=new UserGroup();
  		group.setName("ADMIN");
  		List<String> perms= List.of(

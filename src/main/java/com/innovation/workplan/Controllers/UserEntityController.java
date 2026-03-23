@@ -23,6 +23,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -249,6 +250,18 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
                     System.out.println("Active Directory auth successful, generating token");
                     userDetails = myCustomUserDetailsService.loadUserByUsername(authenticationRequest.getUsername());
                     authenticationResponse.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
+                } else if (ue.getUserRole() != null && ue.getUserRole().contains("SUPER_ADMIN")) {
+                    // Use BCrypt for SUPER_ADMIN users
+                    System.out.println("Checking SUPER_ADMIN user password with BCrypt");
+                    BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+                    if (encoder.matches(authenticationRequest.getPassword(), ue.getPassword())) {
+                        System.out.println("BCrypt password match for SUPER_ADMIN, generating token");
+                        userDetails = myCustomUserDetailsService.loadUserByUsername(authenticationRequest.getUsername());
+                        authenticationResponse.setJwtToken("Bearer " + jwtUtility.generateToken(userDetails));
+                    } else {
+                        System.out.println("BCrypt password mismatch for SUPER_ADMIN");
+                        authenticationResponse.setJwtToken(null);
+                    }
                 } else if (Integer.parseInt(ue.getGrade()) == 0 && authenticationRequest.getUsername().equals(ue.getUsername())) {
                     System.out.println("Checking grade 0 user password");
                     if (ue.getPassword().equals(authenticationRequest.getPassword())) {
