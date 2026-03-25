@@ -1,4 +1,6 @@
 package com.innovation.workplan.Filters;
+
+import java.util.Arrays;
 import com.innovation.workplan.ServiceImplementations.MyCustomUserDetailsService;
 import com.innovation.workplan.Utilities.JWTUtility;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +50,14 @@ public class JwtFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(httpServletRequest)
                 );
 
-                SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+                
+                // DEBUG LOGGING for 403 issues
+                System.out.println("=== JWT DEBUG ===");
+System.out.println("Username: " + userName);
+                System.out.println("Authorities: " + Arrays.toString(usernamePasswordAuthenticationToken.getAuthorities().toArray()));
+                System.out.println("=================");
+                
             }
 
         }

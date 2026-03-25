@@ -177,8 +177,11 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
         UserEntity ue = userEntityService.getUser(authenticationRequest.getUsername());
 
         if (ue != null) {
-            // Check if user has ADMIN, HC, or regular user role and set accordingly
-            if (ue.getUserRole() != null && ue.getUserRole().contains("ADMIN")) {
+            // Check if user has SUPER_ADMIN, ADMIN, HC, or regular user role and set accordingly
+            if (ue.getUserRole() != null && ue.getUserRole().contains("SUPER_ADMIN")) {
+                System.out.println("User is SUPER_ADMIN, setting logAs to super_admin");
+                ue.setLogAs("super_admin");
+            } else if (ue.getUserRole() != null && ue.getUserRole().contains("ADMIN")) {
                 System.out.println("User is ADMIN, setting logAs to admin");
                 ue.setLogAs("admin");
             } else if (ue.getUserRole() != null && ue.getUserRole().contains("HC")) {
@@ -214,8 +217,11 @@ public ResponseEntity<?> adminlogin(@RequestBody JwtRequest authenticationReques
         System.out.println("UserEntity found: " + (ue != null ? ue.getUsername() : "null"));
 
         if (ue != null) {
-            // Check if user has ADMIN, HC, or regular user role and set accordingly
-            if (ue.getUserRole() != null && ue.getUserRole().contains("ADMIN")) {
+            // Check if user has SUPER_ADMIN, ADMIN, HC, or regular user role and set accordingly
+            if (ue.getUserRole() != null && ue.getUserRole().contains("SUPER_ADMIN")) {
+                System.out.println("User is SUPER_ADMIN, setting logAs to super_admin");
+                ue.setLogAs("super_admin");
+            } else if (ue.getUserRole() != null && ue.getUserRole().contains("ADMIN")) {
                 System.out.println("User is ADMIN, setting logAs to admin");
                 ue.setLogAs("admin");
             } else if (ue.getUserRole() != null && ue.getUserRole().contains("HC")) {

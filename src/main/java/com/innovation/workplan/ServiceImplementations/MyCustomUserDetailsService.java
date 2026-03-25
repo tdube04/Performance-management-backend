@@ -46,15 +46,20 @@ public class MyCustomUserDetailsService implements UserDetailsService {
 //        }
         UserEntity userEntity=userEntityService.findByUsername(username);
         if(userEntity!=null){
-            if(userEntity.getUserRole().contains("USER")){
+            String logAs = userEntity.getLogAs();
+            if("super_admin".equalsIgnoreCase(logAs) || "superadmin".equalsIgnoreCase(logAs)){
+                return new User(userEntity.getUsername(),"",userGroupRepository.findById("SUPER_ADMIN").orElse(null)
+                        .getPermissions().
+                        parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
+            if("user".equalsIgnoreCase(logAs)){
         return new User(userEntity.getUsername(),"",userGroupRepository.findById("USER").orElse(null)
                 .getPermissions().
                 parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
-            if(userEntity.getUserRole().contains("ADMIN")){
+            if("admin".equalsIgnoreCase(logAs)){
                 return new User(userEntity.getUsername(),"",userGroupRepository.findById("ADMIN").orElse(null)
                         .getPermissions().
                         parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
-            if(userEntity.getUserRole().contains("HC")){
+            if("hc".equalsIgnoreCase(logAs)){
                 // Get HC_USER group permissions and add HC_ACCESS authority
                 List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
                 authorities.add(new SimpleGrantedAuthority("HC_ACCESS"));
