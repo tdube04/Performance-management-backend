@@ -87,6 +87,14 @@ public class JWTUtility {
                 claims.put("logAs", "admin");
                 return createToken(claims, userDetails.getUsername());
             }
+            else if (userEntity.getLogAs().equalsIgnoreCase("board") && userEntity.getUserRole().contains("BOARD")) {
+                String key="BOARD";
+                List<String> roles=groupRepository.findById(key).orElse(null).getPermissions();
+
+                claims.put(key, roles);
+                claims.put("logAs", "board");
+                return createToken(claims, userDetails.getUsername());
+            }
         }
 
             String key1 = "NEW_USER";

@@ -59,6 +59,10 @@ public class MyCustomUserDetailsService implements UserDetailsService {
                 return new User(userEntity.getUsername(),"",userGroupRepository.findById("ADMIN").orElse(null)
                         .getPermissions().
                         parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
+            if("board".equalsIgnoreCase(logAs)){
+                return new User(userEntity.getUsername(),"",userGroupRepository.findById("BOARD").orElse(null)
+                        .getPermissions().
+                        parallelStream().map(SimpleGrantedAuthority::new).collect(Collectors.toList()));}
             if("hc".equalsIgnoreCase(logAs)){
                 // Get HC_USER group permissions and add HC_ACCESS authority
                 List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();

@@ -634,6 +634,32 @@ public class WorkplanApplication {
  		hcUserGroup.setPermissions(hc_prms);
  		groupService.save(hcUserGroup);
 
+		// Board User Group for Board Member Dashboard
+		UserGroup boardUserGroup = new UserGroup();
+		boardUserGroup.setName("BOARD");
+		List<String> board_prms = List.of(
+				"GET_USER",
+				"GET_ALL_USERS",
+				"SEARCH_USER",
+				"SEARCH_WORKPLAN",
+				"SEARCH_WORKPLAN_BY_APPRAISEE",
+				"SEARCH_WORKPLAN_BY_STATUS",
+				"APPROVE_WORKPLAN",
+				"DISAPPROVE_WORKPLAN",
+				"SEARCH_SCORECARD",
+				"SEARCH_SCORECARD_BY_APPRAISEE",
+				"SEARCH_SCORECARD_BY_STATUS",
+				"UPDATE_SCORECARD",
+				"SHOW_PDF",
+				"SHOW_SCORECARD_PDF",
+				"DOWNLOAD_FILE",
+				"VIEW_ALL_DIVISION",
+				"FIND_ACTIVE_PERFORMANCE_AREA",
+				"VIEW_ACTIVE_PILLARS"
+		);
+		boardUserGroup.setPermissions(board_prms);
+		groupService.save(boardUserGroup);
+
 	}
 
 	@Bean
